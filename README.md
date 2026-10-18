@@ -1,8 +1,8 @@
 # 成长背包（材料扩容）
 
-《饥荒联机版》服务器模组，版本 1.1.0。新增一个可用材料逐级扩容的背包：**8 → 16 → 24 → 32 格**。
+《饥荒联机版》服务器模组，版本 1.1.1。新增一个可用材料逐级扩容的背包：**8 → 16 → 24 → 32 格**。
 
-[Steam 创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3822024875) · [公开源码](https://github.com/NewBoyIsBusy/growing-backpack) · [安装包下载](https://github.com/NewBoyIsBusy/growing-backpack/releases/tag/v1.1.0)
+[Steam 创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3822024875) · [公开源码](https://github.com/NewBoyIsBusy/growing-backpack) · [安装包下载](https://github.com/NewBoyIsBusy/growing-backpack/releases/tag/v1.1.1)
 
 Steam 工坊条目设为仅好友可见；GitHub 源码和版本下载公开。
 
@@ -44,7 +44,7 @@ Steam 工坊条目设为仅好友可见；GitHub 源码和版本下载公开。
 
 ## 安装
 
-解压 `growing_backpack_v1.1.0.zip`，把整个 `growing_backpack` 文件夹放入游戏 `Don't Starve Together/mods/`。目录结构应为 `mods/growing_backpack/modinfo.lua`。更新已安装的版本时退出世界，覆盖原模组文件，然后重新进入世界。
+解压 `growing_backpack_v1.1.1.zip`，把整个 `growing_backpack` 文件夹放入游戏 `Don't Starve Together/mods/`。目录结构应为 `mods/growing_backpack/modinfo.lua`。更新已安装的版本时退出世界，覆盖原模组文件，然后重新进入世界。
 
 房主在世界设置的“模组 → 服务器模组”中启用“成长背包（材料扩容）”。本模组新增物品和容器布局，**房主和所有加入的玩家均需安装**；本地安装包不会自动向好友分发，好友需要手动安装同一版本。
 
@@ -65,6 +65,8 @@ Steam 工坊条目设为仅好友可见；GitHub 源码和版本下载公开。
 - 关闭或卸载前先把物品移出成长背包；禁用新增物品模组后，这些自定义物品无法正常载入。
 
 ## 开发验证
+
+工坊包以普通文件发布，不含 Klei 文件清单，`modinfo.lua` 必须保留 `forcemanifest = false`，否则工坊版会在启动时找不到模块。同级克隆 [nearby-autofuel](https://github.com/NewBoyIsBusy/nearby-autofuel) 后，其 `tests/run_workshop_smoke.py` 可直接加载两个实际工坊安装包进行联合验证，支持 `--caves`。
 
 ```powershell
 python growing_backpack/tests/run_checks.py
