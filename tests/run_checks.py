@@ -26,6 +26,14 @@ end
 assert(layout.Slots(-1) == 8)
 assert(layout.Slots(99) == 32)
 
+local containers={params={}}
+for level=0,3 do containers.params["growing_backpack_"..level]=layout.Make(level,function() end) end
+function containers.widgetsetup(replica,key)
+    replica.name=key
+    replica.widget=containers.params[key].widget
+end
+package.loaded.containers=containers
+
 -- Run the actual prefab's remote-client branch and dirty-event callback.
 local events, pending, open, closes, opens = {}, nil, false, 0, 0
 TheWorld = {ismastersim=false}; ThePlayer = {}
@@ -44,6 +52,7 @@ local replica = {
     Close=function() closes=closes+1; open=false end,
     Open=function() opens=opens+1; open=true end,
     WidgetSetup=function(self, name) self.name=name end,
+    GetWidget=function(self) return self.widget end,
 }
 CreateEntity = function()
     return {entity=methods,AnimState=methods,MiniMapEntity=methods,GUID=1,

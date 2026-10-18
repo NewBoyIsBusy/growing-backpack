@@ -4,6 +4,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import socket
 
 SOURCE = Path(__file__).resolve().parents[1]
 GAME = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("D:/Program Files (x86)/Steam/steamapps/common/Don't Starve Together")
@@ -28,7 +29,17 @@ console_enabled = true
 [SHARD]
 shard_enabled = false
 """, encoding="utf-8")
-(CLUSTER / "Master/server.ini").write_text("[NETWORK]\nserver_port = 11341\n[SHARD]\nis_master = true\n[ACCOUNT]\nencode_user_path = false\n", encoding="utf-8")
+port = None
+for candidate in range(11018, 10997, -1):
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+        try:
+            probe.bind(("0.0.0.0", candidate))
+            port = candidate
+            break
+        except OSError:
+            pass
+assert port is not None, "No free offline DST port; leave existing games untouched"
+(CLUSTER / "Master/server.ini").write_text(f"[NETWORK]\nserver_port = {port}\n[SHARD]\nis_master = true\n[ACCOUNT]\nencode_user_path = false\n", encoding="utf-8")
 (CLUSTER / "Master/modoverrides.lua").write_text('return { growing_backpack_validation = { enabled = true } }\n', encoding="utf-8")
 (CLUSTER / "Master/worldgenoverride.lua").write_text('return { override_enabled = true, preset = "SURVIVAL_TOGETHER", overrides = { world_size = "small" } }\n', encoding="utf-8")
 try:

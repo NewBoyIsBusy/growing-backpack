@@ -194,5 +194,38 @@ test("ordinary storage and storing kits in other containers are unchanged", func
     assert(kit.components.inventoryitem.owner == chest)
     p:Remove(); chest:Remove(); player:Remove()
 end)
+test("real crafting consumes ingredients and auto-equips the new backpack", function()
+    local player = SpawnPrefab("wilson")
+    local built
+    player:ListenForEvent("builditem", function(inst,data) built=data.item end)
+    for _,name in ipairs({"cutgrass","twigs"}) do
+        local item=SpawnPrefab(name)
+        item.components.stackable:SetStackSize(4)
+        player.components.inventory:GiveItem(item)
+    end
+    assert(player.components.builder:DoBuild("growing_backpack"))
+    assert(built and built.prefab=="growing_backpack")
+    assert(built.components.equippable:IsEquipped())
+    assert(built.components.container:IsOpenedBy(player))
+    assert(built.components.container.numslots==8)
+    assert(not player.components.inventory:Has("cutgrass",1))
+    assert(not player.components.inventory:Has("twigs",1))
+    player.components.inventory:DropItem(built,true,true)
+    for level=1,3 do
+        local recipe=AllRecipes["gb_upgrade_"..level]
+        for _,ingredient in ipairs(recipe.ingredients) do
+            local item=SpawnPrefab(ingredient.type)
+            item.components.stackable:SetStackSize(ingredient.amount)
+            player.components.inventory:GiveItem(item)
+        end
+        local backpack=built
+        assert(player.components.builder:DoBuild("gb_upgrade_"..level))
+        assert(built.prefab=="gb_upgrade_"..level)
+        assert(backpack.components.trader:AcceptGift(player,built))
+        built=backpack
+    end
+    assert(built.components.container.numslots==32)
+    built:Remove(); player:Remove()
+end)
 print("GROWINGPACK_GAME_SUCCESS " .. count .. " tests")
 c_shutdown(false)

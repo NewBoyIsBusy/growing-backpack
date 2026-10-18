@@ -1,8 +1,8 @@
 # 成长背包（材料扩容）
 
-《饥荒联机版》服务器模组，版本 1.1.2。新增一个可用材料逐级扩容的背包：**8 → 16 → 24 → 32 格**。
+《饥荒联机版》服务器模组，版本 1.1.3。新增一个可用材料逐级扩容的背包：**8 → 16 → 24 → 32 格**。
 
-[Steam 创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3822024875) · [公开源码](https://github.com/NewBoyIsBusy/growing-backpack) · [安装包下载](https://github.com/NewBoyIsBusy/growing-backpack/releases/tag/v1.1.2)
+[Steam 创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3822024875) · [公开源码](https://github.com/NewBoyIsBusy/growing-backpack) · [安装包下载](https://github.com/NewBoyIsBusy/growing-backpack/releases/tag/v1.1.3)
 
 Steam 工坊条目设为仅好友可见；GitHub 源码和版本下载公开。
 
@@ -46,7 +46,7 @@ Steam 工坊条目设为仅好友可见；GitHub 源码和版本下载公开。
 
 ## 安装
 
-解压 `growing_backpack_v1.1.2.zip`，把整个 `growing_backpack` 文件夹放入游戏 `Don't Starve Together/mods/`。目录结构应为 `mods/growing_backpack/modinfo.lua`。更新已安装的版本时退出世界，覆盖原模组文件，然后重新进入世界。
+解压 `growing_backpack_v1.1.3.zip`，把整个 `growing_backpack` 文件夹放入游戏 `Don't Starve Together/mods/`。目录结构应为 `mods/growing_backpack/modinfo.lua`。更新已安装的版本时退出世界，覆盖原模组文件，然后重新进入世界。
 
 房主在世界设置的“模组 → 服务器模组”中启用“成长背包（材料扩容）”。本模组新增物品和容器布局，**房主和所有加入的玩家均需安装**；本地安装包不会自动向好友分发，好友需要手动安装同一版本。
 
@@ -72,10 +72,13 @@ Steam 工坊条目设为仅好友可见；GitHub 源码和版本下载公开。
 
 ```powershell
 python growing_backpack/tests/run_checks.py
+python growing_backpack/tests/run_client_checks.py
 python growing_backpack/tests/run_game_smoke.py
 ```
 
 `run_checks.py` 需要 Python 与 `lupa.lua51`，优先使用工作区 `.tools/lua_test_runtime`。它检查 Lua 5.1 语法、四档布局、等级边界，以及远端客户端初始化和等级变更后的容器刷新。
+
+`run_client_checks.py` 在 Lua 5.1 中运行原版 `container_replica` 和 `container_classified` 的实际客户端代码，以模拟网络变量和调度器检查生命周期。可复现 1.1.2 的重复初始化崩溃，并验证制作后初始化、四档有效格子、末格监听、满包判断、重开、晚加入及预制物回调。需要原版 `scripts` 目录（默认工作区 `game_scripts_reference/scripts`，或设置 `DST_SCRIPTS_PATH`）。这不是完整真人客户端的联网测试。
 
 `run_game_smoke.py` 默认使用本机 Steam 的 DST 专用服务器，也可将游戏路径作为参数传入。脚本创建单独的离线测试世界和临时验证模组，不读取已有存档；结束后移除临时模组，保留工作区 `growingpack_*` 目录中的日志。验证内容包括配方注册、初始容量、升级顺序、工具扣除、原物品保留、末格存储、满包存取档、穿脱和原版背包隔离。
 
@@ -84,5 +87,7 @@ python growing_backpack/tests/run_game_smoke.py
 2026-10-18，1.1.0 验证结果：Lua 5.1 语法和客户端模拟检查通过；本机 DST 专用服务器的 9 项引擎测试全部通过，包括装满 32 格后保存并恢复物品、四档外观与图标的切换及读档恢复。穿戴符号覆盖与清理另通过模拟检查；专用服务器无画面，尚未做真人客户端的视觉验收。
 
 2026-10-18，1.1.2 验证结果：12 项引擎测试通过，新增原版动作选择器的左右键选择、三档升级执行、错误档位和满级拒收、普通物品存入及工具存入其他容器检查；客户端仅副本组件环境下的动作收集也通过模拟测试。
+
+2026-10-18，1.1.3 验证结果：13 项引擎测试通过，包含实际制作成长背包、材料扣除、自动装备、三档工具制作与升级。原版客户端容器代码的 5 组生命周期检查通过，覆盖原崩溃复现、重复初始化、四档同步、重开/晚加入和实际预制物回调。所有检查均使用独立测试环境，不读取或修改玩家存档。
 
 封面由内置 `image_gen` 工具生成，提示词保存于 `assets/cover-prompt.txt`；原图为 `assets/workshop-cover.png`，工坊使用同画面的 JPEG 文件 `assets/workshop-preview.jpg`。

@@ -4,7 +4,7 @@ description = [[制作成长背包，使用三档扩容工具，将容量从 8 �
 把背包放在地上，拿起对应工具对背包使用“扩容背包”。升级保留包内物品。
 所有玩家均需安装本模组。]]
 author = "wanzi"
-version = "1.1.2"
+version = "1.1.3"
 -- This package ships loose files, without a Klei-generated modmanifest.
 forcemanifest = false
 api_version = 10

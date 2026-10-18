@@ -1,5 +1,6 @@
 local layout = require("gb_layout")
 local appearance = require("gb_appearance")
+local clientcontainer = require("gb_client_container")
 local assets = {
     Asset("ANIM", "anim/backpack.zip"),
     Asset("ANIM", "anim/swap_backpack.zip"),
@@ -22,12 +23,7 @@ local function ApplyClientLayout(inst)
         floater:SetVerticalOffset(look.offset)
         floater:SetScale(look.scale)
     end
-    local container = inst.replica.container
-    if container == nil then return end
-    local wasopen = ThePlayer ~= nil and container:IsOpenedBy(ThePlayer)
-    if wasopen then container:Close() end
-    container:WidgetSetup("growing_backpack_" .. inst._gb_level:value())
-    if wasopen then container:Open(ThePlayer) end
+    clientcontainer.Refresh(inst)
 end
 
 local function SetLevel(inst, level)
@@ -91,6 +87,7 @@ local function fn()
     inst.AnimState:PlayAnimation("anim")
     inst.MiniMapEntity:SetIcon("backpack.png")
     inst:AddTag("backpack")
+    inst:AddTag("gb_growing_backpack")
     inst:AddTag("trader")
     inst.foleysound = "dontstarve/movement/foley/backpack"
     inst._gb_level = net_tinybyte(inst.GUID, "growing_backpack.level", "gb_leveldirty")

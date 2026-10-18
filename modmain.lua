@@ -1,6 +1,12 @@
 PrefabFiles = { "growing_backpack", "gb_upgrade_kits" }
 
 local G = GLOBAL
+local clientcontainer = G.require("gb_client_container")
+AddClassPostConstruct("components/container_replica", function(self)
+    if self.inst:HasTag("gb_growing_backpack") then
+        clientcontainer.Install(self)
+    end
+end)
 local upgrade = G.require("gb_upgrade_action")
 local expand = AddAction("GB_EXPAND_BACKPACK", "扩容背包", upgrade.Perform)
 expand.priority = 10
