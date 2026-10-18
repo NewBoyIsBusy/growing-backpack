@@ -1,0 +1,10 @@
+Use case: ads-marketing.
+Asset type: square Steam Workshop cover for a Don't Starve Together mod, 1024x1024.
+Create a polished hand-inked gothic survival-game illustration on warm parchment with dark charcoal jagged borders, muted brown leather, blue gray fabric and a little dark red. Clear visual story: one humble canvas backpack being progressively upgraded through four illustrated bags in a clean left-to-right progression; arrows connect the four bags. They are conceptual drawings of a simple tan canvas bag, a brown pig-leather bag, an insulated blue gray bag, and a shaggy dark red monster sack. Bag sizes increase gently. Small rope, gears, and golden ancient mineral fragments along the bottom suggest crafting, without clutter. No characters, no official logo, no actual game screenshot or fake game UI.
+Bold extremely readable Chinese headline at top exactly: "成长背包"
+Subheading exactly: "材料升级 · 外观进化"
+Below the four bags place the large exact capacity progression: "8 → 16 → 24 → 32 格"
+Small footer exactly: "饥荒联机版 MOD"
+Make the title and capacity progression dominant and readable at thumbnail size. This is promotional concept art, not a representation of custom in-game assets. No watermark, no extra text.
+
+Generated with the built-in image_gen tool. Promotional concept illustration, not in-game assets.
