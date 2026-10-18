@@ -59,6 +59,23 @@ open=true; inst._gb_level:set(3); events.gb_leveldirty(inst)
 assert(replica.name == "growing_backpack_3" and closes == 1 and opens == 1)
 assert(inst.displaynamefn(inst):find("32"))
 
+-- Client collection must work with replicas alone (no server components).
+local upgrade = require("gb_upgrade_action")
+local expand = {id="GB_EXPAND_BACKPACK", priority=10}
+local clientplayer = {replica={}}
+local clientkit = {HasTag=function(self,tag) return tag == "gb_upgrade_kit" end,
+    replica={inventoryitem={IsGrandOwner=function(self,p) return p==clientplayer end,
+        IsLockedInSlot=function() return false end}}}
+local choices = {{id="STORE"}, {id="GIVE"}}
+upgrade.Collect(expand, clientkit, clientplayer, {prefab="growing_backpack"}, choices)
+assert(#choices == 1 and choices[1] == expand)
+choices = {{id="STORE"}}
+upgrade.Collect(expand, clientkit, clientplayer, {prefab="treasurechest"}, choices)
+assert(#choices == 1 and choices[1].id == "STORE")
+choices = {{id="STORE"}}
+upgrade.Collect(expand, clientkit, {replica={}}, {prefab="growing_backpack"}, choices)
+assert(#choices == 1 and choices[1].id == "STORE")
+
 local appearance = require("gb_appearance")
 local applied, symbols = {}, {}
 local visual = {
@@ -86,4 +103,4 @@ for level=3,0,-1 do
     assert(symbols.backpack == (level >= 2 and look.build or nil))
 end
 ''')
-print("PASS: Lua 5.1 syntax, four layouts, remote sync, four appearances/icons, equip symbols and floater banks")
+print("PASS: Lua 5.1 syntax, layouts, remote sync, appearances, and replica-only upgrade selection")

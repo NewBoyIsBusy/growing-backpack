@@ -130,5 +130,69 @@ test("all four art builds and icons survive upgrade and reload", function()
     end
     p:Remove()
 end)
+test("real action picker chooses expand for both mouse buttons and executes upgrades", function()
+    local p, player = pack(), SpawnPrefab("wilson")
+    player:AddComponent("playeractionpicker") -- no local input component on a dedicated server
+    local original = SpawnPrefab("rocks")
+    assert(p.components.container:GiveItem(original, 8))
+    assert(player.sg.sg.actionhandlers[ACTIONS.GB_EXPAND_BACKPACK], "server stategraph handler missing")
+    local clientsg = require("stategraphs/SGwilson_client")
+    assert(clientsg.actionhandlers[ACTIONS.GB_EXPAND_BACKPACK], "client stategraph handler missing")
+    for level = 1, 3 do
+        local kit = SpawnPrefab("gb_upgrade_" .. level)
+        player.components.inventory:GiveActiveItem(kit)
+        for _, right in ipairs({false, true}) do
+            local choices = player.components.playeractionpicker:GetUseItemActions(p, kit, right)
+            assert(choices[1] and choices[1].action == ACTIONS.GB_EXPAND_BACKPACK, "click must select expand")
+            for _, choice in ipairs(choices) do
+                assert(choice.action ~= ACTIONS.STORE and choice.action ~= ACTIONS.GIVE)
+            end
+        end
+        local chosen = player.components.playeractionpicker:GetUseItemActions(p, kit, false)[1]
+        assert(chosen:Do(), "selected buffered action must execute")
+        assert(not kit:IsValid())
+        assert(p.components.container.numslots == 8 * (level + 1))
+        assert(p.components.container:GetItemInSlot(8) == original)
+    end
+    p:Remove(); player:Remove()
+end)
+test("wrong-tier and full-level clicks refuse without consuming or storing", function()
+    local p, player = pack(), SpawnPrefab("wilson")
+    player:AddComponent("playeractionpicker")
+    local kit = SpawnPrefab("gb_upgrade_2")
+    player.components.inventory:GiveActiveItem(kit)
+    local function refuse()
+        local chosen = player.components.playeractionpicker:GetUseItemActions(p, kit, false)[1]
+        assert(chosen.action == ACTIONS.GB_EXPAND_BACKPACK)
+        assert(not chosen:Do())
+        assert(kit:IsValid() and kit.components.inventoryitem:GetGrandOwner() == player)
+        assert(p.components.container:NumItems() == 0)
+    end
+    refuse()
+    for level = 1, 3 do upgrade(p, level) end
+    refuse()
+    p:Remove(); player:Remove()
+end)
+test("ordinary storage and storing kits in other containers are unchanged", function()
+    local p, player = pack(), SpawnPrefab("wilson")
+    player:AddComponent("playeractionpicker")
+    local rocks = SpawnPrefab("rocks")
+    player.components.inventory:GiveActiveItem(rocks)
+    local choices = player.components.playeractionpicker:GetUseItemActions(p, rocks, false)
+    local store
+    for _, choice in ipairs(choices) do
+        assert(choice.action ~= ACTIONS.GB_EXPAND_BACKPACK)
+        if choice.action == ACTIONS.STORE then store = choice end
+    end
+    assert(store and store:Do())
+    assert(rocks.components.inventoryitem.owner == p)
+    local chest = SpawnPrefab("treasurechest")
+    local kit = SpawnPrefab("gb_upgrade_1")
+    player.components.inventory:GiveActiveItem(kit)
+    choices = player.components.playeractionpicker:GetUseItemActions(chest, kit, false)
+    assert(choices[1].action == ACTIONS.STORE and choices[1]:Do())
+    assert(kit.components.inventoryitem.owner == chest)
+    p:Remove(); chest:Remove(); player:Remove()
+end)
 print("GROWINGPACK_GAME_SUCCESS " .. count .. " tests")
 c_shutdown(false)

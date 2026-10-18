@@ -1,6 +1,16 @@
 PrefabFiles = { "growing_backpack", "gb_upgrade_kits" }
 
 local G = GLOBAL
+local upgrade = G.require("gb_upgrade_action")
+local expand = AddAction("GB_EXPAND_BACKPACK", "扩容背包", upgrade.Perform)
+expand.priority = 10
+expand.distance = 2
+AddComponentAction("USEITEM", "inventoryitem", function(inst, doer, target, actions, right)
+    upgrade.Collect(expand, inst, doer, target, actions)
+end)
+AddStategraphActionHandler("wilson", G.ActionHandler(expand, "give"))
+AddStategraphActionHandler("wilson_client", G.ActionHandler(expand, "give"))
+
 local containers = G.require("containers")
 local layout = G.require("gb_layout")
 for level = 0, 3 do

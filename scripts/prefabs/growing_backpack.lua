@@ -111,7 +111,7 @@ local function fn()
     inst.components.inspectable.descriptionfn = function(inst)
         local level = inst._gb_level:value()
         return "容量：" .. layout.Slots(level) .. " 格。"
-            .. (level == 3 and "已完成全部扩容。" or "下一阶段需要" .. kitnames[level + 1] .. "，放在地上后给予背包。")
+            .. (level == 3 and "已完成全部扩容。" or "下一阶段需要" .. kitnames[level + 1] .. "，放在地上后使用“扩容背包”。")
     end
     inst:AddComponent("inventoryitem")
     inst.components.inventoryitem:ChangeImageName("backpack")

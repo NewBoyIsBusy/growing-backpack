@@ -1,8 +1,8 @@
 # 成长背包（材料扩容）
 
-《饥荒联机版》服务器模组，版本 1.1.1。新增一个可用材料逐级扩容的背包：**8 → 16 → 24 → 32 格**。
+《饥荒联机版》服务器模组，版本 1.1.2。新增一个可用材料逐级扩容的背包：**8 → 16 → 24 → 32 格**。
 
-[Steam 创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3822024875) · [公开源码](https://github.com/NewBoyIsBusy/growing-backpack) · [安装包下载](https://github.com/NewBoyIsBusy/growing-backpack/releases/tag/v1.1.1)
+[Steam 创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3822024875) · [公开源码](https://github.com/NewBoyIsBusy/growing-backpack) · [安装包下载](https://github.com/NewBoyIsBusy/growing-backpack/releases/tag/v1.1.2)
 
 Steam 工坊条目设为仅好友可见；GitHub 源码和版本下载公开。
 
@@ -22,10 +22,12 @@ Steam 工坊条目设为仅好友可见；GitHub 源码和版本下载公开。
 | 远古扩容工具 | 铥矿 ×4、黄宝石 ×2、噩梦燃料 ×4 | 完整远古伪科学站，每次需在站旁制作 | 24 → 32 格 |
 
 1. 把成长背包脱下，放在地上；不用清空里面的东西。
-2. 用鼠标拿起对应档位的扩容工具，对背包执行“给予”。
+2. 用鼠标拿起对应档位的扩容工具，指向**地上的背包实体**，执行“扩容背包”（左右键均支持）。
 3. 成功后消耗一个工具，原背包直接增加容量，再捡起装备即可。
 
 必须按顺序升级，无法跳级。错误档位、普通材料、已满级或穿戴中的背包不会消耗工具。升级后的容量显示在物品名称中，检查背包可查看下一档要求。
+
+1.1.2 修复了旧版工具被“存入”背包而不升级的问题。把工具拖到已经打开的背包格子中仍是普通存放；扩容时请点地上的背包。先前被存入的工具可以取出继续使用。
 
 容量记录在背包自身，换人携带不会重置。保存时记录等级，读档时先恢复容量，再装载包内物品。
 
@@ -44,7 +46,7 @@ Steam 工坊条目设为仅好友可见；GitHub 源码和版本下载公开。
 
 ## 安装
 
-解压 `growing_backpack_v1.1.1.zip`，把整个 `growing_backpack` 文件夹放入游戏 `Don't Starve Together/mods/`。目录结构应为 `mods/growing_backpack/modinfo.lua`。更新已安装的版本时退出世界，覆盖原模组文件，然后重新进入世界。
+解压 `growing_backpack_v1.1.2.zip`，把整个 `growing_backpack` 文件夹放入游戏 `Don't Starve Together/mods/`。目录结构应为 `mods/growing_backpack/modinfo.lua`。更新已安装的版本时退出世界，覆盖原模组文件，然后重新进入世界。
 
 房主在世界设置的“模组 → 服务器模组”中启用“成长背包（材料扩容）”。本模组新增物品和容器布局，**房主和所有加入的玩家均需安装**；本地安装包不会自动向好友分发，好友需要手动安装同一版本。
 
@@ -80,5 +82,7 @@ python growing_backpack/tests/run_game_smoke.py
 远端客户端检查使用模拟环境；游戏界面的实际显示、真人多人联机及跨洞穴迁移仍需在游戏中验收。原版游戏脚本和测试世界不包含在安装包内。
 
 2026-10-18，1.1.0 验证结果：Lua 5.1 语法和客户端模拟检查通过；本机 DST 专用服务器的 9 项引擎测试全部通过，包括装满 32 格后保存并恢复物品、四档外观与图标的切换及读档恢复。穿戴符号覆盖与清理另通过模拟检查；专用服务器无画面，尚未做真人客户端的视觉验收。
+
+2026-10-18，1.1.2 验证结果：12 项引擎测试通过，新增原版动作选择器的左右键选择、三档升级执行、错误档位和满级拒收、普通物品存入及工具存入其他容器检查；客户端仅副本组件环境下的动作收集也通过模拟测试。
 
 封面由内置 `image_gen` 工具生成，提示词保存于 `assets/cover-prompt.txt`；原图为 `assets/workshop-cover.png`，工坊使用同画面的 JPEG 文件 `assets/workshop-preview.jpg`。
