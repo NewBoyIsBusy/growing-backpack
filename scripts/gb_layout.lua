@@ -10,7 +10,9 @@ end
 
 function M.Make(level, Vector3)
     local count = M.Slots(level)
-    local cols = count == 8 and 2 or 4
+    -- Keep side panels four rows high as capacity grows, rather than doubling
+    -- their height into the inventory/tooltips at the bottom of the screen.
+    local cols = count / 4
     local rows = count / cols
     local sx, sy = cols / 2, rows / 4
     local widget = {

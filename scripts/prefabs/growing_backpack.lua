@@ -3,13 +3,16 @@ local appearance = require("gb_appearance")
 local clientcontainer = require("gb_client_container")
 local assets = {
     Asset("ANIM", "anim/backpack.zip"),
-    Asset("ANIM", "anim/swap_backpack.zip"),
-    Asset("ANIM", "anim/piggyback.zip"),
-    Asset("ANIM", "anim/swap_piggyback.zip"),
-    Asset("ANIM", "anim/swap_icepack.zip"),
-    Asset("ANIM", "anim/swap_krampus_sack.zip"),
+    Asset("ANIM", "anim/gb_pack_0.zip"),
+    Asset("ANIM", "anim/gb_pack_1.zip"),
+    Asset("ANIM", "anim/gb_pack_2.zip"),
+    Asset("ANIM", "anim/gb_pack_3.zip"),
     Asset("ANIM", "anim/ui_backpack_2x4.zip"),
 }
+for level = 0, 3 do
+    table.insert(assets, Asset("ATLAS", "images/gb_pack_" .. level .. ".xml"))
+    table.insert(assets, Asset("IMAGE", "images/gb_pack_" .. level .. ".tex"))
+end
 local kitnames = { "皮革扩容工具", "机械扩容工具", "远古扩容工具" }
 
 local function ApplyClientLayout(inst)
@@ -83,9 +86,9 @@ local function fn()
     inst.entity:AddNetwork()
     MakeInventoryPhysics(inst)
     inst.AnimState:SetBank("backpack1")
-    inst.AnimState:SetBuild("swap_backpack")
+    inst.AnimState:SetBuild("gb_pack_0")
     inst.AnimState:PlayAnimation("anim")
-    inst.MiniMapEntity:SetIcon("backpack.png")
+    inst.MiniMapEntity:SetIcon("gb_pack_0.png")
     inst:AddTag("backpack")
     inst:AddTag("gb_growing_backpack")
     inst:AddTag("trader")
@@ -111,7 +114,8 @@ local function fn()
             .. (level == 3 and "已完成全部扩容。" or "下一阶段需要" .. kitnames[level + 1] .. "，放在地上后使用“扩容背包”。")
     end
     inst:AddComponent("inventoryitem")
-    inst.components.inventoryitem:ChangeImageName("backpack")
+    inst.components.inventoryitem.atlasname = appearance.Get(0).atlas
+    inst.components.inventoryitem:ChangeImageName("gb_pack_0")
     inst.components.inventoryitem.cangoincontainer = false
     inst:AddComponent("equippable")
     inst.components.equippable.equipslot = EQUIPSLOTS.BODY

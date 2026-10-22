@@ -133,7 +133,7 @@ for level=0,3 do
 end
 print("CLIENT_PASS reopen, late join at every level, and classified-before-replica ordering")
 
-Asset=noop
+Asset=function(kind,path) return {type=kind,file=path} end
 MakeInventoryPhysics=noop
 MakeInventoryFloatable=noop
 local packfn=require("prefabs/growing_backpack")

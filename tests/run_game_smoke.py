@@ -5,15 +5,27 @@ import subprocess
 import sys
 import tempfile
 import socket
+import argparse
 
 SOURCE = Path(__file__).resolve().parents[1]
-GAME = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("D:/Program Files (x86)/Steam/steamapps/common/Don't Starve Together")
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("game", nargs="?", type=Path, default=Path("D:/Program Files (x86)/Steam/steamapps/common/Don't Starve Together"))
+parser.add_argument("--reuse-test-world", type=Path, help="Clone a successful growingpack_* test world, never a player save")
+args = parser.parse_args()
+GAME = args.game
 MOD = (GAME / "mods/growing_backpack_validation").resolve()
 assert MOD.parent == (GAME / "mods").resolve()
 assert not MOD.exists(), f"Temporary test mod already exists: {MOD}"
 STORAGE = Path(tempfile.mkdtemp(prefix="growingpack_", dir=SOURCE.parent))
 CLUSTER = STORAGE / "DoNotStarveTogether/GrowingPackTest"
 (CLUSTER / "Master").mkdir(parents=True)
+if args.reuse_test_world:
+    previous = args.reuse_test_world.resolve()
+    assert previous.parent == SOURCE.parent.resolve() and previous.name.startswith("growingpack_")
+    assert "GROWINGPACK_GAME_SUCCESS" in (previous / "engine_console.log").read_text(encoding="utf-8", errors="replace")
+    previous_cluster = previous / "DoNotStarveTogether/GrowingPackTest"
+    assert "cluster_name = Growing Backpack Isolated Validation" in (previous_cluster / "cluster.ini").read_text(encoding="utf-8")
+    shutil.copytree(previous_cluster / "Master/save", CLUSTER / "Master/save")
 (CLUSTER / "cluster.ini").write_text("""[GAMEPLAY]
 game_mode = survival
 max_players = 1
@@ -46,6 +58,8 @@ try:
     MOD.mkdir()
     shutil.copy2(SOURCE / "modinfo.lua", MOD)
     shutil.copytree(SOURCE / "scripts", MOD / "scripts")
+    for asset_dir in ("anim", "images"):
+        shutil.copytree(SOURCE / asset_dir, MOD / asset_dir)
     shutil.copy2(SOURCE / "tests/game_smoke.lua", MOD / "scripts/gb_game_smoke.lua")
     main = (SOURCE / "modmain.lua").read_text(encoding="utf-8")
     main += '''

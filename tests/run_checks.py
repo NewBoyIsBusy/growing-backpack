@@ -19,9 +19,15 @@ for level = 0, 3 do
     for _, pos in ipairs(data.widget.slotpos) do
         local key = pos.x .. ":" .. pos.y
         assert(not seen[key]); seen[key] = true
-        assert(pos.x >= -312 and pos.x <= -87)
-        assert(math.abs(pos.y) < 265)
+        assert(pos.x >= -612 and pos.x <= -87)
+        assert(math.abs(pos.y) < 115)
     end
+    -- The side panel remains four rows even at 32 slots; no tall eight-row UI.
+    local rows = {}
+    for _, pos in ipairs(data.widget.slotpos) do rows[pos.y] = true end
+    local rowcount = 0
+    for _ in pairs(rows) do rowcount = rowcount + 1 end
+    assert(rowcount == 4)
 end
 assert(layout.Slots(-1) == 8)
 assert(layout.Slots(99) == 32)
@@ -37,7 +43,7 @@ package.loaded.containers=containers
 -- Run the actual prefab's remote-client branch and dirty-event callback.
 local events, pending, open, closes, opens = {}, nil, false, 0, 0
 TheWorld = {ismastersim=false}; ThePlayer = {}
-Asset = function() end
+Asset = function(kind, path) return {type=kind, file=path} end
 Prefab = function(name, fn) return fn end
 MakeInventoryPhysics = function() end
 MakeInventoryFloatable = function() end
@@ -100,8 +106,8 @@ local owner = {AnimState={
     ClearOverrideSymbol=function(self,s) symbols[s]=nil end,
     OverrideSymbol=function(self,s,build) symbols[s]=build end,
 }}
-local expected = {"backpack", "piggyback", "icepack", "krampus_sack"}
--- Reverse order also checks that returning to a plain bag clears sack symbols.
+local expected = {"gb_pack_0", "gb_pack_1", "gb_pack_2", "gb_pack_3"}
+-- Each tier has its own inventory atlas and clears inherited sack symbols.
 for level=3,0,-1 do
     visual._gb_level:set(level)
     appearance.Apply(visual); appearance.Equip(visual,owner)
@@ -109,7 +115,8 @@ for level=3,0,-1 do
     assert(applied.image == expected[level+1] and applied.map == expected[level+1] .. ".png")
     assert(applied.bank == look.bank and applied.build == look.build and applied.floatbank == look.bank)
     assert(symbols.swap_body == look.build)
-    assert(symbols.backpack == (level >= 2 and look.build or nil))
+    assert(symbols.backpack == nil)
+    assert(visual.components.inventoryitem.atlasname == look.atlas)
 end
 ''')
 print("PASS: Lua 5.1 syntax, layouts, remote sync, appearances, and replica-only upgrade selection")

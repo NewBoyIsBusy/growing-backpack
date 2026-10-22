@@ -1,12 +1,15 @@
--- Vanilla art only; no skin entitlements or gameplay components are copied.
+-- Four original sprite builds share the vanilla backpack's animation rig.
 local layout = require("gb_layout")
 local M = {}
 local looks = {
-    { bank = "backpack1", build = "swap_backpack", image = "backpack", size = "small", offset = .2, scale = 1 },
-    { bank = "piggyback", build = "swap_piggyback", image = "piggyback", size = "small", offset = .1, scale = .85 },
-    { bank = "backpack1", build = "swap_icepack", image = "icepack", size = "small", offset = .15, scale = 1, backpack_symbol = true },
-    { bank = "backpack1", build = "swap_krampus_sack", image = "krampus_sack", size = "med", offset = .1, scale = .65, backpack_symbol = true },
+    { bank = "backpack1", build = "gb_pack_0", image = "gb_pack_0", size = "small", offset = .2, scale = 1 },
+    { bank = "backpack1", build = "gb_pack_1", image = "gb_pack_1", size = "small", offset = .2, scale = 1 },
+    { bank = "backpack1", build = "gb_pack_2", image = "gb_pack_2", size = "small", offset = .2, scale = 1 },
+    { bank = "backpack1", build = "gb_pack_3", image = "gb_pack_3", size = "small", offset = .2, scale = 1 },
 }
+for _, look in ipairs(looks) do
+    look.atlas = "images/" .. look.image .. ".xml"
+end
 
 function M.Get(level)
     return looks[layout.ClampLevel(level) + 1]
@@ -16,9 +19,6 @@ function M.Equip(inst, owner)
     local look = M.Get(inst._gb_level:value())
     owner.AnimState:ClearOverrideSymbol("backpack")
     owner.AnimState:OverrideSymbol("swap_body", look.build, "swap_body")
-    if look.backpack_symbol then
-        owner.AnimState:OverrideSymbol("backpack", look.build, "backpack")
-    end
 end
 
 function M.Apply(inst)
@@ -36,6 +36,7 @@ function M.Apply(inst)
     end
     local inventoryitem = inst.components.inventoryitem
     if inventoryitem then
+        inventoryitem.atlasname = look.atlas
         inventoryitem:ChangeImageName(look.image)
         local equipped = inst.components.equippable
         if equipped and equipped:IsEquipped() and inventoryitem.owner then

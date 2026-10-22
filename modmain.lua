@@ -1,6 +1,26 @@
 PrefabFiles = { "growing_backpack", "gb_upgrade_kits" }
 
 local G = GLOBAL
+Assets = {}
+for level = 0, 3 do
+    local image = "gb_pack_" .. level
+    local atlas = "images/" .. image .. ".xml"
+    Assets[#Assets + 1] = G.Asset("ATLAS", atlas)
+    Assets[#Assets + 1] = G.Asset("IMAGE", "images/" .. image .. ".tex")
+    RegisterInventoryItemAtlas(atlas, image .. ".tex")
+    AddMinimapAtlas(atlas)
+end
+for level = 1, 3 do
+    local image = "gb_upgrade_" .. level
+    local atlas = "images/" .. image .. ".xml"
+    Assets[#Assets + 1] = G.Asset("ATLAS", atlas)
+    Assets[#Assets + 1] = G.Asset("IMAGE", "images/" .. image .. ".tex")
+    RegisterInventoryItemAtlas(atlas, image .. ".tex")
+end
+if not G.TheNet:IsDedicated() then
+    local inventorylayout = G.require("gb_inventory_layout")
+    AddClassPostConstruct("widgets/inventorybar", inventorylayout.Install)
+end
 local clientcontainer = G.require("gb_client_container")
 AddClassPostConstruct("components/container_replica", function(self)
     if self.inst:HasTag("gb_growing_backpack") then
@@ -46,10 +66,10 @@ end
 
 local Ingredient, TECH = G.Ingredient, G.TECH
 AddRecipe2("growing_backpack", { Ingredient("cutgrass", 4), Ingredient("twigs", 4) },
-    TECH.SCIENCE_ONE, { image = "backpack.tex", atlas = G.GetInventoryItemAtlas("backpack.tex") }, { "CONTAINERS" })
+    TECH.SCIENCE_ONE, { image = "gb_pack_0.tex", atlas = "images/gb_pack_0.xml" }, { "CONTAINERS" })
 AddRecipe2("gb_upgrade_1", { Ingredient("rope", 2), Ingredient("pigskin", 2), Ingredient("goldnugget", 2) },
-    TECH.SCIENCE_ONE, { image = "sewing_kit.tex", atlas = G.GetInventoryItemAtlas("sewing_kit.tex") }, { "CONTAINERS" })
+    TECH.SCIENCE_ONE, { image = "gb_upgrade_1.tex", atlas = "images/gb_upgrade_1.xml" }, { "CONTAINERS" })
 AddRecipe2("gb_upgrade_2", { Ingredient("silk", 4), Ingredient("papyrus", 2), Ingredient("gears", 2) },
-    TECH.SCIENCE_TWO, { image = "sewing_kit.tex", atlas = G.GetInventoryItemAtlas("sewing_kit.tex") }, { "CONTAINERS" })
+    TECH.SCIENCE_TWO, { image = "gb_upgrade_2.tex", atlas = "images/gb_upgrade_2.xml" }, { "CONTAINERS" })
 AddRecipe2("gb_upgrade_3", { Ingredient("thulecite", 4), Ingredient("yellowgem", 2), Ingredient("nightmarefuel", 4) },
-    TECH.ANCIENT_FOUR, { nounlock = true, image = "sewing_kit.tex", atlas = G.GetInventoryItemAtlas("sewing_kit.tex") }, { "CONTAINERS" })
+    TECH.ANCIENT_FOUR, { nounlock = true, image = "gb_upgrade_3.tex", atlas = "images/gb_upgrade_3.xml" }, { "CONTAINERS" })
