@@ -1,8 +1,8 @@
 # 成长背包（材料扩容）
 
-《饥荒联机版》服务器模组，版本 **1.3.0**。同一个背包随材料投入逐级扩容：**8 → 16 → 24 → 32 格**；机械档起还可另装食物保鲜插件，远古档可另装返鲜插件。
+《饥荒联机版》服务器模组，版本 **1.3.1**。同一个背包随材料投入逐级扩容：**8 → 16 → 24 → 32 格**；机械档起还可另装食物保鲜插件，远古档可另装返鲜插件。
 
-[Steam 创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3822024875) · [公开源码](https://github.com/NewBoyIsBusy/growing-backpack) · [安装包下载](https://github.com/NewBoyIsBusy/growing-backpack/releases/tag/v1.3.0)
+[Steam 创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3822024875) · [公开源码](https://github.com/NewBoyIsBusy/growing-backpack) · [安装包下载](https://github.com/NewBoyIsBusy/growing-backpack/releases/tag/v1.3.1)
 
 Steam 工坊仅好友可见；GitHub 源码和版本下载公开。
 
@@ -61,13 +61,14 @@ Steam 工坊仅好友可见；GitHub 源码和版本下载公开。
 
 ![扩容工具与功能插件图标](assets/kits-preview.png)
 
-- 独立侧栏固定四行，容量增加时扩展为 2/4/6/8 列。
-- 整合背包模式下，16/24/32 格分别为 8 列 × 2/3/4 行，在主栏上方居中显示；原版底部单行物品栏保持原尺寸和位置。
-- 两种模式都使用原生九宫格细边框，角饰不随容量拉宽；格子保持正常大小，支持鼠标与手柄导航。
+- **每页 8 格**：8/16/24/32 格分别为 1/2/3/4 页，扩容增加页数。界面保持原版普通背包的大小，不再一次铺开全部格子。
+- **独立背包模式**使用原版 2 列 × 4 行木框；**整合背包模式**使用原版两行物品栏布局，其中背包一行显示当前页的 8 格。
+- 点击原版左右箭头翻页，页码显示当前位置；手柄在当前页的横向边界继续移动可翻页。物品图标与格子保持原版尺寸。
+- 分页只改变显示：所有已解锁格子仍可存放物品、正常联网同步，并持续参与已安装插件的保鲜或返鲜。无需清空、重做或重新升级已有背包。
 
 ## 安装
 
-完全退出游戏，解压 `growing_backpack_v1.3.0.zip`，把整个 `growing_backpack` 文件夹放入 `Don't Starve Together/mods/`；结构应为 `mods/growing_backpack/modinfo.lua`。更新时覆盖旧模组文件，再重新启动游戏。Steam 订阅用户使用工坊更新。
+完全退出游戏，解压 `growing_backpack_v1.3.1.zip`，把整个 `growing_backpack` 文件夹放入 `Don't Starve Together/mods/`；结构应为 `mods/growing_backpack/modinfo.lua`。更新时覆盖旧模组文件，再重新启动游戏。Steam 订阅用户使用工坊更新。
 
 房主在世界设置的“模组 → 服务器模组”中启用“成长背包（材料扩容）”。**房主和所有玩家均需安装同一版本**；本地 ZIP 不会自动向好友分发。可用于已有世界。
 
@@ -104,7 +105,7 @@ python growing_backpack/tests/run_foodmodule_checks.py
 python growing_backpack/tests/run_game_smoke.py
 ```
 
-Lua 检查使用 `lupa.lua51`，优先读取工作区 `.tools/lua_test_runtime`。客户端、界面与食物回归运行原版游戏相关 Lua，使用模拟实体、网络变量和控件依赖；原版脚本默认位于 `game_scripts_reference/scripts`，可用 `DST_SCRIPTS_PATH` 指定。UI 回归检查格子包围范围、主栏原位置、九宫格角饰尺寸、手柄导航及容器复用；食物回归检查安装条件、腐败倍率、返鲜速度、优先级与存档状态。
+Lua 检查使用 `lupa.lua51`，优先读取工作区 `.tools/lua_test_runtime`。客户端、界面与食物回归运行原版游戏相关 Lua，使用模拟实体、网络变量和控件依赖；原版脚本默认位于 `game_scripts_reference/scripts`，可用 `DST_SCRIPTS_PATH` 指定。界面检查需覆盖两种背包模式下的分页显示、物品格与真实库存编号的对应、手柄导航及容器复用；食物回归检查安装条件、腐败倍率、返鲜速度、优先级与存档状态。
 
 引擎脚本创建独立离线测试世界与临时模组，结束后移除临时模组并保留工作区日志。专用服务器与模拟检查不等同于真人客户端画面、完整多人联机或跨洞穴迁移验收。原版游戏脚本和测试世界不包含在安装包内。
 

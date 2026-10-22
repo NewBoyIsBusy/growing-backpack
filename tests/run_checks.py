@@ -16,13 +16,14 @@ for level = 0, 3 do
     local data = layout.Make(level, function(x,y,z) return {x=x,y=y,z=z} end)
     assert(#data.widget.slotpos == 8 * (level+1))
     local seen = {}
-    for _, pos in ipairs(data.widget.slotpos) do
+    for index, pos in ipairs(data.widget.slotpos) do
         local key = pos.x .. ":" .. pos.y
-        assert(not seen[key]); seen[key] = true
-        assert(pos.x >= -612 and pos.x <= -87)
+        if index <= 8 then assert(not seen[key]) else assert(seen[key]) end
+        seen[key] = true
+        assert(pos.x == -162 or pos.x == -87)
         assert(math.abs(pos.y) < 115)
     end
-    -- The side panel remains four rows even at 32 slots; no tall eight-row UI.
+    -- All capacities share the original four-row, two-column page footprint.
     local rows = {}
     for _, pos in ipairs(data.widget.slotpos) do rows[pos.y] = true end
     local rowcount = 0
