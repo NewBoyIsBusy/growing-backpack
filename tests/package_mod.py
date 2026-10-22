@@ -3,21 +3,14 @@ from pathlib import Path
 import shutil
 import zipfile
 import re
+import sys
 
 SOURCE = Path(__file__).resolve().parents[1]
-version = re.search(r'version\s*=\s*"([^"]+)"', (SOURCE / "modinfo.lua").read_text(encoding="utf-8")).group(1)
-ARCHIVE = SOURCE.parent / f"growing_backpack_v{version}.zip"
+sys.path.insert(0, str(SOURCE / "tools"))
+from release_manifest import release_files, version
+ARCHIVE = SOURCE.parent / f"growing_backpack_v{version(SOURCE)}.zip"
 DEST = Path("D:/Program Files (x86)/Steam/steamapps/common/Don't Starve Together/mods/growing_backpack")
-files = [SOURCE / name for name in ("modinfo.lua", "modmain.lua", "README.md", "CHANGELOG.md", "assets/workshop-preview.jpg", "assets/tiers-preview.png")]
-files += sorted((SOURCE / "scripts").rglob("*.lua"))
-files += [SOURCE / "anim" / f"gb_pack_{level}.zip" for level in range(4)]
-files += [SOURCE / "anim" / f"gb_upgrade_{level}.zip" for level in range(1, 4)]
-files.append(SOURCE / "assets/kits-preview.png")
-files += sorted(file for file in (SOURCE / "images").rglob("*") if file.suffix in (".xml", ".tex"))
-for level in range(4):
-    for extension in ("xml", "tex"):
-        assert SOURCE / "images" / f"gb_pack_{level}.{extension}" in files
-assert all(file.is_file() for file in files), "Build the four backpack tiers before packaging"
+files = release_files(SOURCE)
 assert not ARCHIVE.exists(), f"Archive already exists: {ARCHIVE}"
 if DEST.exists():
     old_version = re.search(r'version\s*=\s*"([^"]+)"', (DEST / "modinfo.lua").read_text(encoding="utf-8")).group(1)

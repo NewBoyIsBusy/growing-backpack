@@ -1,10 +1,12 @@
 -- Reflow only the growing backpack's integrated HUD. Keep vanilla InvSlots,
 -- containers and event callbacks intact; no profile or server state is changed.
 local M = {}
+local Panel = require("gb_pack_panel")
 local COLUMNS = 8
 local SLOT = 68
 local XSTEP = SLOT + 12
 local YSTEP = SLOT + 8
+local BOTTOM_SLOT_Y = 128
 
 local function IsGrowingBar(bar)
     local pack = bar.backpack
@@ -18,63 +20,59 @@ end
 local function Restore(bar)
     local previous = bar._gb_inventory_layout
     if previous == nil then return end
-    -- These widgets survive Rebuild. Row widgets, slots and the arrow do not.
-    bar.bg:SetSize(previous.background_width, previous.background_height)
-    if previous.cover_shown then bar.bgcover:Show() else bar.bgcover:Hide() end
+    -- The panel is a child of bottomrow, which vanilla destroys on Rebuild.
     bar._gb_inventory_layout = nil
 end
 
 local function Apply(bar)
     if not IsGrowingBar(bar) or #bar.inv == 0
-        or bar.bg.GetSize == nil or bar.bg.SetSize == nil then
+        or bar.bg.GetSize == nil then
         return
     end
     local count = #bar.backpackinv
     local rows = math.ceil(count / COLUMNS)
-    local width, height = bar.bg:GetSize()
     local state = {
         rows = rows,
         columns = COLUMNS,
-        background_width = width,
-        background_height = height,
-        cover_shown = bar.bgcover.shown,
-        anchor_extra = (rows - 1) * YSTEP,
+        anchor_extra = BOTTOM_SLOT_Y + (rows - 1) * YSTEP,
     }
     bar._gb_inventory_layout = state
 
-    -- Keep the main inventory at the normal bottom-row height. Additional
-    -- backpack rows grow upwards, never below the bottom of the screen.
-    bar.toprow:SetPosition(0, -YSTEP / 2)
-    local center = (bar.inv[1]:GetPosition().x + bar.inv[#bar.inv]:GetPosition().x) / 2
-    bar.bottomrow:SetPosition(center, YSTEP / 2)
-    local top = YSTEP / 2 + (rows - 1) * YSTEP
+    -- Restore precisely the vanilla single-row inventory geometry. Never
+    -- resize its background or move its slots down to make room for the bag.
+    bar.toprow:SetPosition(0, 0)
+    bar.bg:SetPosition(0, -64)
+    bar.bgcover:SetPosition(0, -100)
+    bar.bgcover:Show()
+    bar.root:CancelMoveTo()
+    bar.root:SetPosition(bar.out_pos)
+
+    -- The separate compact panel is centred above the entire main bar, rather
+    -- than above its first fifteen slots (which left a large blank right side).
+    local center_y = BOTTOM_SLOT_Y + (rows - 1) * YSTEP / 2
+    bar.bottomrow:SetPosition(0, center_y)
+    state.panel = Panel.Create(bar.bottomrow, COLUMNS, rows, XSTEP, YSTEP)
+    local top = BOTTOM_SLOT_Y + (rows - 1) * YSTEP
     for index, slot in ipairs(bar.backpackinv) do
         local row = math.floor((index - 1) / COLUMNS)
         local column = (index - 1) % COLUMNS
-        local y = (rows - row - 1) * YSTEP
+        local y = ((rows - 1) / 2 - row) * YSTEP
         slot:SetPosition((column - (COLUMNS - 1) / 2) * XSTEP, y)
-        slot.top_align_tip = top - (YSTEP / 2 + y) + SLOT / 2 + 8
+        slot.top_align_tip = top - (center_y + y) + SLOT / 2 + 8
     end
     -- Controller action text sits above all rows, including when a main or
     -- equipped slot is selected. The original text/cursor machinery is reused.
     for _, list in ipairs({bar.inv, bar.equip}) do
         for _, slot in pairs(list) do
-            slot.top_align_tip = top + YSTEP / 2 + SLOT / 2 + 8
+            slot.top_align_tip = top + SLOT / 2 + 8
         end
     end
     if bar.integrated_arrow ~= nil then bar.integrated_arrow:Hide() end
     for _, widget in ipairs({bar.hudcompass, bar.hand_inv}) do
         local position = widget:GetPosition()
-        widget:SetPosition(position.x, position.y - YSTEP, position.z)
+        widget:SetPosition(position.x, 40, position.z)
     end
 
-    -- Stretch only the native panel, never the slot or item art. Its old lower
-    -- cover would cross the extra rows, so hide it until the next rebuild.
-    local bottom = -YSTEP / 2 - SLOT / 2 - 16
-    local upper = top + SLOT / 2 + 16
-    bar.bg:SetSize(width, upper - bottom)
-    bar.bg:SetPosition(0, (upper + bottom) / 2)
-    bar.bgcover:Hide()
     bar:UpdatePosition()
     bar:UpdateCursor()
 end

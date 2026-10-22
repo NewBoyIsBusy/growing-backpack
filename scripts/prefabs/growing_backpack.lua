@@ -1,6 +1,7 @@
 local layout = require("gb_layout")
 local appearance = require("gb_appearance")
 local clientcontainer = require("gb_client_container")
+local foodmodules = require("gb_foodmodules")
 local assets = {
     Asset("ANIM", "anim/backpack.zip"),
     Asset("ANIM", "anim/gb_pack_0.zip"),
@@ -37,21 +38,36 @@ local function SetLevel(inst, level)
 end
 
 local function CanUpgrade(inst, item)
+    if foodmodules.KITS[item.prefab] then
+        return inst.components.gb_foodmodules:CanInstall(item)
+    end
     return inst._gb_level:value() < 3
         and item.prefab == "gb_upgrade_" .. (inst._gb_level:value() + 1)
         and inst.components.inventoryitem.owner == nil
         and not (inst.components.burnable and inst.components.burnable:IsBurning())
 end
 
-local function OnUpgrade(inst, giver)
+local function OnUpgrade(inst, giver, item)
+    if foodmodules.KITS[item.prefab] then
+        inst.components.gb_foodmodules:Install(item)
+        if giver and giver.components.talker then
+            giver.components.talker:Say(foodmodules.KITS[item.prefab].name .. "安装完成！背包和物品都保留。")
+        end
+        return
+    end
     SetLevel(inst, inst._gb_level:value() + 1)
     if giver and giver.components.talker then
         giver.components.talker:Say("扩容完成！现在有 " .. layout.Slots(inst._gb_level:value()) .. " 格。")
     end
 end
 
-local function OnRefuse(inst, giver)
+local function OnRefuse(inst, giver, item)
     if giver and giver.components.talker then
+        if item and foodmodules.KITS[item.prefab] then
+            local _, reason = inst.components.gb_foodmodules:CanInstall(item)
+            giver.components.talker:Say(reason)
+            return
+        end
         local level = inst._gb_level:value()
         giver.components.talker:Say(level == 3 and "背包已经升到满级了。"
             or "把背包放在地上，再用" .. kitnames[level + 1] .. "扩容。")
@@ -95,8 +111,10 @@ local function fn()
     inst.foleysound = "dontstarve/movement/foley/backpack"
     inst._gb_level = net_tinybyte(inst.GUID, "growing_backpack.level", "gb_leveldirty")
     inst._gb_level:set(0)
+    inst._gb_modules = net_tinybyte(inst.GUID, "growing_backpack.foodmodules", "gb_modulesdirty")
+    inst._gb_modules:set(0)
     inst.displaynamefn = function(inst)
-        return "成长背包（" .. layout.Slots(inst._gb_level:value()) .. "格）"
+        return "成长背包（" .. layout.Slots(inst._gb_level:value()) .. "格" .. foodmodules.NameSuffix(inst._gb_modules:value()) .. "）"
     end
     MakeInventoryFloatable(inst, "small", .2, nil, nil, nil, {bank = "backpack1", anim = "anim"})
     inst.entity:SetPristine()
@@ -112,6 +130,7 @@ local function fn()
         local level = inst._gb_level:value()
         return "容量：" .. layout.Slots(level) .. " 格。"
             .. (level == 3 and "已完成全部扩容。" or "下一阶段需要" .. kitnames[level + 1] .. "，放在地上后使用“扩容背包”。")
+            .. foodmodules.Description(inst._gb_modules:value())
     end
     inst:AddComponent("inventoryitem")
     inst.components.inventoryitem.atlasname = appearance.Get(0).atlas
@@ -124,6 +143,7 @@ local function fn()
     inst.components.equippable:SetOnEquipToModel(function(inst) inst.components.container:Close() end)
     inst:AddComponent("container")
     SetLevel(inst, 0)
+    inst:AddComponent("gb_foodmodules")
     inst:AddComponent("trader")
     inst.components.trader:SetAcceptTest(CanUpgrade)
     inst.components.trader:SetOnAccept(OnUpgrade)

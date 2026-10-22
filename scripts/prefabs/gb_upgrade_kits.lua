@@ -1,5 +1,4 @@
-local function MakeKit(level)
-    local name = "gb_upgrade_" .. level
+local function MakeKit(name, tag)
     local atlas = "images/" .. name .. ".xml"
     local assets = {
         Asset("ANIM", "anim/" .. name .. ".zip"),
@@ -15,7 +14,7 @@ local function MakeKit(level)
         inst.AnimState:SetBank(name)
         inst.AnimState:SetBuild(name)
         inst.AnimState:PlayAnimation("idle")
-        inst:AddTag("gb_upgrade_kit")
+        inst:AddTag(tag)
         MakeInventoryFloatable(inst, "small", .05, .8)
         inst.entity:SetPristine()
         if not TheWorld.ismastersim then return inst end
@@ -30,4 +29,8 @@ local function MakeKit(level)
     return Prefab(name, fn, assets)
 end
 
-return MakeKit(1), MakeKit(2), MakeKit(3)
+return MakeKit("gb_upgrade_1", "gb_upgrade_kit"),
+    MakeKit("gb_upgrade_2", "gb_upgrade_kit"),
+    MakeKit("gb_upgrade_3", "gb_upgrade_kit"),
+    MakeKit("gb_preservation_kit", "gb_foodmodule_kit"),
+    MakeKit("gb_freshness_kit", "gb_foodmodule_kit")

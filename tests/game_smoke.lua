@@ -251,5 +251,159 @@ test("three expansion tools load original art and crafting icons", function()
         kit:Remove()
     end
 end)
+test("food plugin tier gates and duplicates preserve rejected tools", function()
+    local p = pack()
+    for level = 0, 3 do
+        if level > 0 then upgrade(p, level) end
+        for _, name in ipairs({"gb_preservation_kit", "gb_freshness_kit"}) do
+            local kit = assert(SpawnPrefab(name))
+            local expected = (name == "gb_preservation_kit" and level == 2)
+                or (name == "gb_freshness_kit" and level == 3)
+            assert(p.components.trader:AcceptGift(nil, kit) == expected)
+            assert(kit:IsValid() == not expected)
+            if kit:IsValid() then kit:Remove() end
+        end
+    end
+    assert(p._gb_modules:value() == 3)
+    for _, name in ipairs({"gb_preservation_kit", "gb_freshness_kit"}) do
+        local kit = SpawnPrefab(name)
+        assert(not p.components.trader:AcceptGift(nil, kit) and kit:IsValid())
+        kit:Remove()
+    end
+    p:Remove()
+end)
+
+test("preservation survives expansion with original backpack and contents", function()
+    local p = pack()
+    upgrade(p, 1); upgrade(p, 2)
+    local originalguid = p.GUID
+    local berries = SpawnPrefab("berries")
+    assert(p.components.container:GiveItem(berries, 24))
+    local kit = SpawnPrefab("gb_preservation_kit")
+    assert(p.components.trader:AcceptGift(nil, kit))
+    assert(p.components.container.numslots == 24)
+    local expected = 1 - (1 - TUNING.PERISH_FRIDGE_MULT) * .75
+    assert(p.components.preserver:GetPerishRateMultiplier(berries) == expected)
+    upgrade(p, 3)
+    assert(p.GUID == originalguid and p.components.container:GetItemInSlot(24) == berries)
+    assert(p.components.gb_foodmodules.preservation and p._gb_modules:value() == 1)
+    local record = p:GetSaveRecord()
+    p:Remove()
+    p = assert(SpawnSaveRecord(record))
+    assert(p.components.gb_foodmodules.preservation and p._gb_modules:value() == 1)
+    assert(p.components.container.numslots == 32)
+    assert(p.components.container:GetItemInSlot(24).prefab == "berries")
+    p:Remove()
+end)
+
+test("freshness alone pauses spoilage and returns 25 percent per day", function()
+    local p = pack()
+    for level = 1, 3 do upgrade(p, level) end
+    local kit = SpawnPrefab("gb_freshness_kit")
+    assert(p.components.trader:AcceptGift(nil, kit))
+    assert(not p.components.gb_foodmodules.preservation and p._gb_modules:value() == 2)
+    local berries = SpawnPrefab("berries")
+    assert(p.components.container:GiveItem(berries, 1))
+    local perish = berries.components.perishable
+    perish:SetPercent(.1)
+    perish.start_dt = nil
+    perish:LongUpdate(TUNING.TOTAL_DAY_TIME)
+    assert(math.abs(perish:GetPercent() - .1) < .000001)
+    p.components.gb_foodmodules:LongUpdate(TUNING.TOTAL_DAY_TIME)
+    assert(math.abs(perish:GetPercent() - .35) < .000001)
+    p.components.gb_foodmodules:LongUpdate(3 * TUNING.TOTAL_DAY_TIME)
+    assert(perish:GetPercent() == 1 and berries:HasTag("fresh"))
+    local rot = SpawnPrefab("spoiled_food")
+    assert(p.components.container:GiveItem(rot, 2))
+    local rocks = SpawnPrefab("rocks")
+    assert(p.components.container:GiveItem(rocks, 3))
+    p.components.gb_foodmodules:LongUpdate(4 * TUNING.TOTAL_DAY_TIME)
+    assert(p.components.container:GetItemInSlot(2) == rot and rot.prefab == "spoiled_food")
+    assert(p.components.container:GetItemInSlot(3) == rocks)
+    assert(p.components.preserver:GetPerishRateMultiplier(rocks) == 1)
+    p.components.container:RemoveItemBySlot(1)
+    perish.start_dt = nil
+    perish:LongUpdate(30)
+    assert(perish:GetPercent() < 1, "outside food must resume native spoilage")
+    berries:Remove(); p:Remove()
+end)
+
+test("both food modules survive full save load with freshness priority", function()
+    local p = pack()
+    for level = 1, 3 do upgrade(p, level) end
+    for _, name in ipairs({"gb_freshness_kit", "gb_preservation_kit"}) do
+        assert(p.components.trader:AcceptGift(nil, SpawnPrefab(name)))
+    end
+    local berries = SpawnPrefab("berries")
+    assert(p.components.container:GiveItem(berries, 32))
+    berries.components.perishable:SetPercent(.2)
+    local record = p:GetSaveRecord()
+    p:Remove()
+    p = assert(SpawnSaveRecord(record))
+    local modules = p.components.gb_foodmodules
+    assert(modules.preservation and modules.freshness and p._gb_modules:value() == 3)
+    berries = p.components.container:GetItemInSlot(32)
+    assert(berries.prefab == "berries")
+    assert(p.components.preserver:GetPerishRateMultiplier(berries) == 0)
+    modules:LongUpdate(TUNING.TOTAL_DAY_TIME)
+    assert(math.abs(berries.components.perishable:GetPercent() - .45) < .000001)
+    assert(p.displaynamefn(p):find("保鲜+返鲜", 1, true))
+    p:Remove()
+end)
+
+test("real plugin action replaces store, refuses worn pack, and installs on ground", function()
+    local p, player = pack(), SpawnPrefab("wilson")
+    for level = 1, 3 do upgrade(p, level) end
+    player:AddComponent("playeractionpicker")
+    local kit = SpawnPrefab("gb_freshness_kit")
+    player.components.inventory:GiveActiveItem(kit)
+    assert(player.sg.sg.actionhandlers[ACTIONS.GB_INSTALL_MODULE])
+    assert(require("stategraphs/SGwilson_client").actionhandlers[ACTIONS.GB_INSTALL_MODULE])
+    player.components.inventory:Equip(p)
+    assert(not p.components.trader:AcceptGift(player, kit) and kit:IsValid())
+    player.components.inventory:DropItem(p, true, true)
+    for _, right in ipairs({false, true}) do
+        local choices = player.components.playeractionpicker:GetUseItemActions(p, kit, right)
+        assert(choices[1] and choices[1].action == ACTIONS.GB_INSTALL_MODULE)
+        for _, choice in ipairs(choices) do
+            assert(choice.action ~= ACTIONS.STORE and choice.action ~= ACTIONS.GIVE)
+        end
+    end
+    assert(player.components.playeractionpicker:GetUseItemActions(p, kit, true)[1]:Do())
+    assert(not kit:IsValid() and p.components.gb_foodmodules.freshness)
+    local duplicate = SpawnPrefab("gb_freshness_kit")
+    player.components.inventory:GiveActiveItem(duplicate)
+    assert(not player.components.playeractionpicker:GetUseItemActions(p, duplicate, true)[1]:Do())
+    assert(duplicate:IsValid() and duplicate.components.inventoryitem:GetGrandOwner() == player)
+    local chest = SpawnPrefab("treasurechest")
+    local choices = player.components.playeractionpicker:GetUseItemActions(chest, duplicate, false)
+    assert(choices[1].action == ACTIONS.STORE and choices[1]:Do())
+    assert(duplicate.components.inventoryitem.owner == chest)
+    chest:Remove(); player:Remove(); p:Remove()
+end)
+
+test("both new plugins craft with matching custom icons and ground builds", function()
+    local player = SpawnPrefab("wilson")
+    local built
+    player:ListenForEvent("builditem", function(_, data) built = data.item end)
+    for _, name in ipairs({"gb_preservation_kit", "gb_freshness_kit"}) do
+        local recipe = assert(AllRecipes[name])
+        for _, ingredient in ipairs(recipe.ingredients) do
+            local material = SpawnPrefab(ingredient.type)
+            material.components.stackable:SetStackSize(ingredient.amount)
+            player.components.inventory:GiveItem(material)
+        end
+        assert(player.components.builder:DoBuild(name))
+        assert(built and built.prefab == name and built:HasTag("gb_foodmodule_kit"))
+        assert(built.AnimState:GetBuild() == name and built.AnimState:IsCurrentAnimation("idle"))
+        assert(built.components.inventoryitem.imagename == name)
+        assert(built.components.inventoryitem.atlasname == "images/" .. name .. ".xml")
+        assert(TheSim:AtlasContains(resolvefilepath(recipe.atlas), name .. ".tex"))
+        assert(recipe.image == name .. ".tex")
+        built:Remove()
+    end
+    player:Remove()
+end)
+
 print("GROWINGPACK_GAME_SUCCESS " .. count .. " tests")
 c_shutdown(false)

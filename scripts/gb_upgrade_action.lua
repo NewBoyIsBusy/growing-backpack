@@ -1,7 +1,7 @@
 local M = {}
 
-function M.Collect(action, inst, doer, target, actions)
-    if not inst:HasTag("gb_upgrade_kit") or target == nil
+function M.Collect(action, inst, doer, target, actions, tag)
+    if not inst:HasTag(tag or "gb_upgrade_kit") or target == nil
         or target.prefab ~= "growing_backpack" then
         return
     end
@@ -21,11 +21,11 @@ function M.Collect(action, inst, doer, target, actions)
     actions[#actions + 1] = action
 end
 
-function M.Perform(act)
+function M.Perform(act, tag)
     local item, target, doer = act.invobject, act.target, act.doer
     if item == nil or target == nil or doer == nil
         or not item:IsValid() or not target:IsValid()
-        or not item:HasTag("gb_upgrade_kit") or target.prefab ~= "growing_backpack" then
+        or not item:HasTag(tag or "gb_upgrade_kit") or target.prefab ~= "growing_backpack" then
         return false
     end
     local inventoryitem = item.components.inventoryitem

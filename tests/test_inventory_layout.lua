@@ -19,6 +19,7 @@ function VecUtil_Dot(x,y,u,v) return x*u+y*v end
 local function Entity(widget)
     local inst = {widget=widget, valid=true, listeners={}}
     function inst:IsValid() return self.valid end
+    function inst:DoSimTaskInTime(delay, fn) self.pending=fn end
     function inst:ListenForEvent(event, fn, source)
         source = source or self
         source.listeners[event] = source.listeners[event] or {}
@@ -90,14 +91,30 @@ function Widget:SetString(value) self.text=value end
 function Widget:Click(right) self.clicked={num=self.num,container=self.container,right=right} end
 for _,name in ipairs({"SetColour","SetScaleMode","EnableWordWrap","SetRegionSize","SetHAlign",
     "StartUpdating","StopUpdating","MoveToFront","MoveToBack","SetMaster","Highlight",
-    "DeHighlight","SetFocus","ClearFocus","Refresh","RefreshPosition","StartDrag"}) do Widget[name]=noop end
+    "DeHighlight","SetFocus","ClearFocus","Refresh","RefreshPosition","StartDrag",
+    "SetReadOnlyVisuals","SetHRegPoint","SetVRegPoint"}) do Widget[name]=noop end
 package.loaded["widgets/widget"]=Widget
 
 local Image=Class(Widget,function(self,atlas,texture)
     Widget._ctor(self,"image");self.atlas=atlas;self.texture=texture
     if texture=="inventory_bg_cover.tex" then self.height=330 end
 end)
+function Image:SetTexture(atlas,texture)
+    self.atlas=atlas;self.texture=texture
+    if atlas=="images/dialogrect_9slice.xml" then
+        local sizes={
+            ["center.tex"]={3,3}, ["top.tex"]={477,13}, ["bottom.tex"]={477,13},
+            ["left.tex"]={52,3}, ["right.tex"]={52,3},
+            ["topleft.tex"]={59,38}, ["topright.tex"]={59,38},
+            ["bottomleft.tex"]={59,30}, ["bottomright.tex"]={59,30},
+        }
+        assert(sizes[texture],"unknown native nine-slice texture")
+        self:SetSize(unpack(sizes[texture]))
+    end
+end
+function Image:SetTint(r,g,b,a) self.tint={r,g,b,a} end
 package.loaded["widgets/image"]=Image
+_G.Image=Image
 local Slot=Class(Widget,function(self,index,atlas,texture,owner,container)
     Widget._ctor(self,"slot");self.num=index;self.container=container
     self.bgimage=self:AddChild(Image(atlas,texture))
@@ -119,7 +136,10 @@ package.loaded["widgets/templates"]={IconButton=function()
 end}
 package.loaded["util/sourcemodifierlist"]={boolean=noop}
 setmetatable(package.loaded["util/sourcemodifierlist"],{__call=function() return {} end})
-SCALEMODE_PROPORTIONAL=1;ANCHOR_LEFT=1;EQUIPSLOTS={HANDS="hands",BODY="body",HEAD="head"}
+SCALEMODE_PROPORTIONAL=1;ANCHOR_LEFT=1;ANCHOR_RIGHT=2;ANCHOR_MIDDLE=3;ANCHOR_TOP=4;ANCHOR_BOTTOM=5
+package.loaded.constants={}
+UICOLOURS={BROWN_DARK={80/255,61/255,39/255}}
+EQUIPSLOTS={HANDS="hands",BODY="body",HEAD="head"}
 TALKINGFONT="font";UIFONT="font";STRINGS={UI={HUD={INSPECT_SELF="Inspect"}}}
 function softresolvefilepath() return nil end
 function GetGameModeProperty() return false end
@@ -184,11 +204,44 @@ check("16/24/32 use eight readable columns above the main bar",function()
             assert(p.x>=bar.inv[1]:GetWorldPosition().x and p.x<=bar.inv[#bar.inv]:GetWorldPosition().x)
         end
         local rowcount=0;for _,size in pairs(rows) do assert(size==8);rowcount=rowcount+1 end
-        assert(rowcount==count/8 and not bar.bgcover.shown and not bar.integrated_arrow.shown)
+        assert(rowcount==count/8 and bar.bgcover.shown and not bar.integrated_arrow.shown)
         local upper=bar.backpackinv[1]:GetPosition().y+bar.bottomrow:GetPosition().y+34
-        local _,height=bar.bg:GetSize();assert(bar.bg:GetPosition().y+height/2>upper)
+        local _,height=bar.bg:GetSize();assert(height==250)
         assert(bar.inv[1].top_align_tip>upper-bar.toprow:GetPosition().y)
         local oldheight=height;bar:Rebuild();local _,newheight=bar.bg:GetSize();Eq(newheight,oldheight)
+    end
+end)
+
+check("compact panel hugs only backpack slots and main bar retains native screen position",function()
+    for _,count in ipairs({16,24,32}) do
+        local bar=NewBar(count,true)
+        local vanilla=NewBar(8,false,false,false,false)
+        local panel=bar._gb_inventory_layout.panel
+        local width,height=panel:GetSize()
+        Eq(panel.mid_center.tint[1],80/255);Eq(panel.mid_center.tint[4],.92)
+        Eq(width,7*80+68+16);Eq(height,(count/8-1)*76+68+16)
+        Eq(bar.bottomrow.position.x,0)
+        Eq(bar.bg.width,vanilla.bg.width);Eq(bar.bg.height,vanilla.bg.height)
+        Eq(bar.bg.position.y,vanilla.bg.position.y);Eq(bar.bgcover.position.y,vanilla.bgcover.position.y)
+        Eq(bar.root.position.y,vanilla.root.position.y);Eq(bar.toprow.position.y,vanilla.toprow.position.y)
+        Eq(bar.hand_inv.position.y,vanilla.hand_inv.position.y)
+        for i,slot in ipairs(bar.inv) do
+            local p,reference=slot:GetWorldPosition(),vanilla.inv[i]:GetWorldPosition()
+            Eq(p.x,reference.x);Eq(p.y,reference.y)
+            assert(p.y-34*slot:GetScale().y>0,"main slots must not extend below screen")
+        end
+        for _,slot in ipairs(bar.backpackinv) do
+            assert(math.abs(slot.position.x)+34<=width/2)
+            assert(math.abs(slot.position.y)+34<=height/2)
+        end
+        for _,edge in ipairs(panel.elements) do
+            -- Corners remain a fixed small size instead of widening 4x.
+            if not edge.resizew then Eq(edge.scale.x,.35) end
+            if not edge.resizeh then Eq(edge.scale.y,.35) end
+        end
+        integrated=true;ThePlayer=bar.owner
+        local oldpanel=panel;bar:Rebuild();assert(not oldpanel.inst.valid)
+        Eq(bar._gb_inventory_layout.panel:GetSize(),width)
     end
 end)
 
@@ -231,9 +284,9 @@ check("cursor, active item and original snapping follow reflowed slot positions"
     assert(bar.cursortile:GetPosition():DistSq(bar.active_slot:GetWorldPosition())==0)
     bar.rebuild_snapping=true;bar:Rebuild()
     assert(bar.root.move==nil and bar.root.cancels>0)
-    Eq(bar.root:GetPosition().y,bar.in_pos.y)
+    Eq(bar.root:GetPosition().y,bar.out_pos.y)
     assert(bar.cursortile:GetPosition():DistSq(bar.active_slot:GetWorldPosition())==0)
-    bar:Rebuild();assert(bar.root.move and bar.root.move.time==.5)
+    bar:Rebuild();assert(bar.root.move==nil)
 end)
 
 check("switching to vanilla, eight slots or no bag restores native background and geometry",function()
@@ -269,15 +322,56 @@ end)
 
 check("anchor follows controller scale and visibility without cumulative drift",function()
     local bar=NewBar(32,true,true)
-    local expected=bar.root.position.y-10+3*76*.6
+    local expected=bar.root.position.y-10+(128+3*76)*.6
     bar:UpdatePosition();Eq(bar.autoanchor.position.y,expected)
     bar:UpdatePosition();Eq(bar.autoanchor.position.y,expected)
     bar:OpenControllerInventory();bar:UpdatePosition()
-    Eq(bar.autoanchor.position.y,bar.root.position.y-10+3*76*.8)
+    Eq(bar.autoanchor.position.y,bar.root.position.y-10+(128+3*76)*.8)
     bar:Hide();bar:UpdatePosition();Eq(bar.autoanchor.position.y,0)
     bar:Show();bar:CloseControllerInventory();bar:UpdatePosition();Eq(bar.autoanchor.position.y,expected)
     local parent=Widget("scaled-parent");parent:SetScale(.7);parent:AddChild(bar);parent:AddChild(bar.autoanchor)
     bar:UpdatePosition();Eq(bar.autoanchor.position.y,expected)
-    layout.Install(bar);bar:Rebuild();Eq(bar.bg.height,404)
+    layout.Install(bar);bar:Rebuild();Eq(bar.bg.height,250)
+end)
+
+check("side container shares compact nine-slice frame and restores native containers on reuse",function()
+    local UIAnim=Class(Widget,function(self)
+        Widget._ctor(self,"uianim")
+        self.animstate=setmetatable({}, {__index=function() return noop end})
+    end)
+    function UIAnim:GetAnimState() return self.animstate end
+    package.loaded["widgets/uianim"]=UIAnim
+    package.loaded["widgets/imagebutton"]=Widget
+    local ContainerWidget=require("widgets/containerwidget")
+    local panel=require("gb_pack_panel")
+    local definitions=require("gb_layout")
+    local owner=Entity();owner.components={}
+    local container=Entity();container.replica={}
+    local replica={}
+    function replica:GetWidget() return self.widget end
+    function replica:IsInfiniteStackSize() return false end
+    function replica:IsReadOnlyContainer() return false end
+    function replica:IsSideWidget() return true end
+    function replica:GetItems() return {} end
+    container.replica.container=replica
+    local widget=ContainerWidget(owner);panel.InstallContainer(widget)
+    for level=0,3 do
+        replica.widget=definitions.Make(level,Vector3).widget
+        widget:Open(container,owner)
+        assert(#widget.inv==8*(level+1) and not widget.bganim.shown and not widget.bgimage.shown)
+        local frame=widget._gb_pack_panel
+        local width,height=frame:GetSize()
+        Eq(width,(2*(level+1)-1)*75+68+16);Eq(height,3*75+68+16)
+        for _,slot in ipairs(widget.inv) do
+            assert(math.abs(slot.position.x-frame.position.x)+34<=width/2)
+            assert(math.abs(slot.position.y-frame.position.y)+34<=height/2)
+        end
+        local corner=frame.elements[1]
+        Eq(corner.width*corner.scale.x,59*.35)
+        widget:Close();assert(not frame.inst.valid and widget._gb_pack_panel==nil)
+    end
+    replica.widget={slotpos={Vector3(0,0,0)},animbank="ui_chest_3x3",animbuild="ui_chest_3x3"}
+    widget:Open(container,owner);assert(widget._gb_pack_panel==nil and widget.bganim.shown)
+    widget:Close()
 end)
 print("GROWINGPACK_INVENTORY_SUCCESS "..checks)

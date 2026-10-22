@@ -1,9 +1,10 @@
 """Build original backpack art with Klei's installed animation/texture tools.
 
 Requires Python 3 + Pillow and the official Don't Starve Mod Tools installation.
-Inputs: assets/source/gb_pack_0.png ... gb_pack_3.png, transparent 4 x 3 grids.
+Inputs: assets/source/gb_pack_0.png ... gb_pack_3.png, transparent 4 x 3 grids,
+plus matching gb_pack_N-worn.png sheets for wearable views.
 Example: python tools/build_art.py --level 0 --work-dir ../.tools/art_build
-The output contains build-only anim ZIPs and shared inventory/minimap atlases.
+The output contains build-only anim ZIPs and 64px inventory/minimap atlases.
 The original anim/backpack.zip supplies the backpack1/anim animation (frame 13).
 This script only crops, resizes, packs and verifies images; it does not draw art.
 """
@@ -187,6 +188,14 @@ def build_level(level: int, toolroot: Path, output: Path, work: Path) -> dict:
     with Image.open(source) as opened:
         sheet = opened.convert("RGBA")
     columns, rows = grid_bounds(sheet)
+    original_cells = [sheet.crop((columns[i % 4], rows[i // 4], columns[i % 4 + 1], rows[i // 4 + 1])) for i in range(12)]
+    worn_source = source.with_name(f"{name}-worn.png")
+    worn_cells = original_cells
+    if worn_source.exists():
+        with Image.open(worn_source) as opened:
+            worn_sheet = opened.convert("RGBA")
+        worn_columns, worn_rows = grid_bounds(worn_sheet)
+        worn_cells = [worn_sheet.crop((worn_columns[i % 4], worn_rows[i // 4], worn_columns[i % 4 + 1], worn_rows[i // 4 + 1])) for i in range(12)]
     cells, frames = [], []
     root = ET.Element("Build", name=name)
     symbol = ET.SubElement(root, "Symbol", name="swap_body")
@@ -194,7 +203,9 @@ def build_level(level: int, toolroot: Path, output: Path, work: Path) -> dict:
     with zipfile.ZipFile(source_zip, "w", zipfile.ZIP_DEFLATED) as archive:
         for i, (index, duration, x, y, width, height) in enumerate(FRAMES):
             col, row = i % 4, i // 4
-            cell = sheet.crop((columns[col], rows[row], columns[col + 1], rows[row + 1]))
+            # Wearable views have their own orthographic source. Keep the
+            # approved ground/item design independent from those camera views.
+            cell = original_cells[i] if index == 13 else worn_cells[i]
             cell_w, cell_h = cell.size
             bounds = cell.getchannel("A").point(lambda alpha: 255 if alpha >= 8 else 0).getbbox()
             if bounds is None:
@@ -203,7 +214,7 @@ def build_level(level: int, toolroot: Path, output: Path, work: Path) -> dict:
                 raise ValueError(f"{source}: visible art touches grid edge at row {row + 1}, "
                                  f"column {col + 1} / frame {index}, bounds={bounds}; fix source art")
             cells.append(cell)
-            frame = fit(cell, (width, height))
+            frame = fit(cell, (width, height), padding=0 if index == 13 else 5)
             frames.append(frame)
             frame.save(stage / f"swap_body_{index}.png")
             png = io.BytesIO()
@@ -214,7 +225,7 @@ def build_level(level: int, toolroot: Path, output: Path, work: Path) -> dict:
         archive.writestr("build.xml", ET.tostring(root, encoding="utf-8", xml_declaration=True))
     visible_pixels = sheet.getchannel("A").point(lambda alpha: 255 if alpha >= 8 else 0).histogram()[255]
     sliced_pixels = sum(cell.getchannel("A").point(lambda alpha: 255 if alpha >= 8 else 0).histogram()[255]
-                        for cell in cells)
+                        for cell in original_cells)
     if sliced_pixels != visible_pixels or len(cells) != 12:
         raise ValueError("Grid slicing did not preserve all visible source pixels")
     python27 = toolroot / "buildtools/windows/Python27/python.exe"
@@ -241,7 +252,9 @@ def build_level(level: int, toolroot: Path, output: Path, work: Path) -> dict:
             errors.append({"frame": expected[0], "mean_rgba_error": mean_error})
         preview(frames, stage / "frames-before.png")
         preview(decoded, stage / "frames-decoded.png")
-    icon = fit(cells[-1], (128, 128), padding=8)
+    # ItemTile uses atlas element pixels directly. Vanilla icons have a 64px
+    # texture cell (63px after half-texel inset), not a 128px display cell.
+    icon = fit(cells[-1], (64, 64), padding=6)
     icon_path = stage / f"{name}.png"
     icon.save(icon_path)
     icon_tex = stage / f"{name}.tex"
@@ -259,13 +272,16 @@ def build_level(level: int, toolroot: Path, output: Path, work: Path) -> dict:
     # Inventory uses .tex; the map alias follows the game's existing .png names.
     for extension in ("tex", "png"):
         ET.SubElement(elements, "Element", name=f"{name}.{extension}",
-                      u1="0.00390625", u2="0.99609375", v1="0.00390625", v2="0.99609375")
+                      u1="0.0078125", u2="0.9921875", v1="0.0078125", v2="0.9921875")
     (output / "anim").mkdir(parents=True, exist_ok=True)
     (output / "images").mkdir(parents=True, exist_ok=True)
     shutil.copy2(compiled_zip, output / "anim" / compiled_zip.name)
     shutil.copy2(icon_tex, output / "images" / icon_tex.name)
     ET.ElementTree(atlas).write(output / "images" / f"{name}.xml", encoding="utf-8", xml_declaration=True)
     report = {"level": level, "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+              "worn_source": str(worn_source) if worn_source.exists() else None,
+              "worn_source_sha256": hashlib.sha256(worn_source.read_bytes()).hexdigest() if worn_source.exists() else None,
+              "icon_size": [64, 64], "wearable_padding": 5,
               "source_size": list(sheet.size), "source_columns": columns, "source_rows": rows,
               "source_visible_pixels": visible_pixels, "sliced_visible_pixels": sliced_pixels,
               "frame_count": len(frames), "frame_errors": errors,

@@ -1,4 +1,4 @@
-"""Compile three original expansion-tool sprites with the official Klei tools.
+"""Compile three expansion-tool and two food-module sprites with Klei tools.
 
 Python 3 + Pillow and Don't Starve Mod Tools are required for rebuilding only.
 The player installation uses the resulting anim ZIP and inventory XML/TEX.
@@ -17,14 +17,16 @@ from PIL import Image, ImageChops, ImageStat
 from build_art import ROOT, fit, run, decode_tex, reconstruct, premultiply
 
 
-def build(level, toolroot, work):
-    name = f"gb_upgrade_{level}"
+NAMES = ["gb_upgrade_1", "gb_upgrade_2", "gb_upgrade_3", "gb_preservation_kit", "gb_freshness_kit"]
+
+
+def build(name, toolroot, work):
     stage = work / name
     stage.mkdir(parents=True, exist_ok=True)
     source = ROOT / "assets/source" / f"{name}.png"
     sheet = Image.open(source).convert("RGBA")
     ground = fit(sheet, (96, 96), 2)
-    icon = fit(sheet, (128, 128), 8)
+    icon = fit(sheet, (64, 64), 6)
     buildxml = ET.Element("Build", name=name)
     symbol = ET.SubElement(buildxml, "Symbol", name="kit")
     ET.SubElement(symbol, "Frame", framenum="0", duration="1", x="0", y="-48",
@@ -78,15 +80,15 @@ def build(level, toolroot, work):
     atlas = ET.Element("Atlas")
     ET.SubElement(atlas, "Texture", filename=f"{name}.tex")
     elements = ET.SubElement(atlas, "Elements")
-    ET.SubElement(elements, "Element", name=f"{name}.tex", u1="0.00390625", u2="0.99609375",
-                  v1="0.00390625", v2="0.99609375")
+    ET.SubElement(elements, "Element", name=f"{name}.tex", u1="0.0078125", u2="0.9921875",
+                  v1="0.0078125", v2="0.9921875")
     for folder in ("anim", "images"):
         (ROOT / folder).mkdir(exist_ok=True)
     shutil.copy2(resultzip, ROOT / "anim" / resultzip.name)
     shutil.copy2(icontex, ROOT / "images" / icontex.name)
     ET.ElementTree(atlas).write(ROOT / "images" / f"{name}.xml", encoding="utf-8", xml_declaration=True)
     (stage / "verification.json").write_text(json.dumps({"source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
-        "bank": name, "build": name, "animation": "idle", "ground_size": [96, 96], "icon_error": error}, indent=2))
+        "bank": name, "build": name, "animation": "idle", "ground_size": [96, 96], "icon_size": [64, 64], "icon_error": error}, indent=2))
     print(name + ": ground animation/build and inventory BC3 round trip passed")
     return icon
 
@@ -95,10 +97,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mod-tools", type=Path, default=Path("D:/Program Files (x86)/Steam/steamapps/common/Don't Starve Mod Tools/mod_tools"))
     parser.add_argument("--work-dir", type=Path)
+    parser.add_argument("--name", choices=NAMES, help="Build one item instead of all five")
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="gb_kit_art_") as temporary:
         work = (args.work_dir or Path(temporary)).resolve()
-        preview = Image.new("RGBA", (384, 128))
-        for level in range(1, 4):
-            preview.paste(build(level, args.mod_tools.resolve(), work), ((level - 1) * 128, 0))
-        preview.save(ROOT / "assets/kits-preview.png")
+        names = [args.name] if args.name else NAMES
+        preview = Image.new("RGBA", (64 * len(names), 64))
+        for index, name in enumerate(names):
+            preview.paste(build(name, args.mod_tools.resolve(), work), (index * 64, 0))
+        if not args.name:
+            preview.save(ROOT / "assets/kits-preview.png")
