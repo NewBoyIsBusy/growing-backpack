@@ -1,3 +1,4 @@
+local slots = require("gb_layout").Slots
 -- Executed only in a fresh isolated offline test world.
 local count = 0
 local function test(name, fn)
@@ -10,9 +11,9 @@ local function upgrade(p, level)
     local kit = assert(SpawnPrefab("gb_upgrade_" .. level))
     assert(p.components.trader:AcceptGift(nil, kit))
     assert(not kit:IsValid(), "accepted kit must be consumed")
-    assert(p.components.container.numslots == 8 * (level + 1))
-    assert(p.replica.container:GetNumSlots() == 8 * (level + 1))
-    assert(#p.replica.container:GetWidget().slotpos == 8 * (level + 1))
+    assert(p.components.container.numslots == slots(level))
+    assert(p.replica.container:GetNumSlots() == slots(level))
+    assert(#p.replica.container:GetWidget().slotpos == slots(level))
 end
 test("recipes and initial capacity", function()
     for _, name in ipairs({"growing_backpack", "gb_upgrade_1", "gb_upgrade_2", "gb_upgrade_3"}) do
@@ -41,7 +42,7 @@ test("all upgrades preserve original contents and unlock last slots", function()
     for level = 1, 3 do
         upgrade(p, level)
         assert(p.components.container:GetItemInSlot(8) == original)
-        assert(p.components.container:GiveItem(SpawnPrefab("flint"), 8 * (level + 1)))
+        assert(p.components.container:GiveItem(SpawnPrefab("flint"), slots(level)))
     end
     p:Remove()
 end)
@@ -54,21 +55,21 @@ test("max tier rejects all kits without consuming", function()
         assert(kit:IsValid())
         kit:Remove()
     end
-    assert(p.components.container.numslots == 32)
+    assert(p.components.container.numslots == 30)
     p:Remove()
 end)
-test("save and restore all 32 filled slots", function()
+test("save and restore all 30 filled slots", function()
     local p = pack()
     for level = 1, 3 do upgrade(p, level) end
-    for slot = 1, 32 do
+    for slot = 1, 30 do
         assert(p.components.container:GiveItem(SpawnPrefab(slot % 2 == 0 and "flint" or "rocks"), slot))
     end
     local record = p:GetSaveRecord()
     p:Remove()
     local restored = assert(SpawnSaveRecord(record))
     assert(restored._gb_level:value() == 3)
-    assert(restored.components.container.numslots == 32)
-    for slot = 1, 32 do
+    assert(restored.components.container.numslots == 30)
+    for slot = 1, 30 do
         assert(restored.components.container:GetItemInSlot(slot).prefab == (slot % 2 == 0 and "flint" or "rocks"))
     end
     restored:Remove()
@@ -76,13 +77,13 @@ end)
 test("recover level from saved high slots", function()
     local p = pack()
     for level = 1, 3 do upgrade(p, level) end
-    assert(p.components.container:GiveItem(SpawnPrefab("yellowgem"), 32))
+    assert(p.components.container:GiveItem(SpawnPrefab("yellowgem"), 30))
     local record = p:GetSaveRecord()
     record.data.gb_level = nil
     p:Remove()
     local restored = assert(SpawnSaveRecord(record))
-    assert(restored.components.container.numslots == 32)
-    assert(restored.components.container:GetItemInSlot(32).prefab == "yellowgem")
+    assert(restored.components.container.numslots == 30)
+    assert(restored.components.container:GetItemInSlot(30).prefab == "yellowgem")
     restored:Remove()
 end)
 test("equipping opens backpack and prevents an upgrade while worn", function()
@@ -96,7 +97,7 @@ test("equipping opens backpack and prevents an upgrade while worn", function()
     assert(p.components.inventoryitem.owner == nil)
     assert(not p.components.container:IsOpenedBy(player))
     assert(p.components.trader:AcceptGift(player, kit))
-    assert(p.components.container.numslots == 16)
+    assert(p.components.container.numslots == 15)
     player:Remove()
     p:Remove()
 end)
@@ -133,7 +134,7 @@ test("all four art builds and icons survive upgrade and reload", function()
         assert(swapbuild == hash(look.build) and swapsymbol == hash("swap_body"))
         player.components.inventory:DropItem(p, true, true)
         player:Remove()
-        assert(p.components.container.numslots == 8 * (level + 1))
+        assert(p.components.container.numslots == slots(level))
         assert(not p.components.preserver and not p.components.waterproofer)
     end
     p:Remove()
@@ -159,7 +160,7 @@ test("real action picker chooses expand for both mouse buttons and executes upgr
         local chosen = player.components.playeractionpicker:GetUseItemActions(p, kit, false)[1]
         assert(chosen:Do(), "selected buffered action must execute")
         assert(not kit:IsValid())
-        assert(p.components.container.numslots == 8 * (level + 1))
+        assert(p.components.container.numslots == slots(level))
         assert(p.components.container:GetItemInSlot(8) == original)
     end
     p:Remove(); player:Remove()
@@ -232,7 +233,7 @@ test("real crafting consumes ingredients and auto-equips the new backpack", func
         assert(backpack.components.trader:AcceptGift(player,built))
         built=backpack
     end
-    assert(built.components.container.numslots==32)
+    assert(built.components.container.numslots==30)
     built:Remove(); player:Remove()
 end)
 test("three expansion tools load original art and crafting icons", function()
@@ -278,21 +279,21 @@ test("preservation survives expansion with original backpack and contents", func
     upgrade(p, 1); upgrade(p, 2)
     local originalguid = p.GUID
     local berries = SpawnPrefab("berries")
-    assert(p.components.container:GiveItem(berries, 24))
+    assert(p.components.container:GiveItem(berries, 23))
     local kit = SpawnPrefab("gb_preservation_kit")
     assert(p.components.trader:AcceptGift(nil, kit))
-    assert(p.components.container.numslots == 24)
+    assert(p.components.container.numslots == 23)
     local expected = 1 - (1 - TUNING.PERISH_FRIDGE_MULT) * .75
     assert(p.components.preserver:GetPerishRateMultiplier(berries) == expected)
     upgrade(p, 3)
-    assert(p.GUID == originalguid and p.components.container:GetItemInSlot(24) == berries)
+    assert(p.GUID == originalguid and p.components.container:GetItemInSlot(23) == berries)
     assert(p.components.gb_foodmodules.preservation and p._gb_modules:value() == 1)
     local record = p:GetSaveRecord()
     p:Remove()
     p = assert(SpawnSaveRecord(record))
     assert(p.components.gb_foodmodules.preservation and p._gb_modules:value() == 1)
-    assert(p.components.container.numslots == 32)
-    assert(p.components.container:GetItemInSlot(24).prefab == "berries")
+    assert(p.components.container.numslots == 30)
+    assert(p.components.container:GetItemInSlot(23).prefab == "berries")
     p:Remove()
 end)
 
@@ -335,14 +336,14 @@ test("both food modules survive full save load with freshness priority", functio
         assert(p.components.trader:AcceptGift(nil, SpawnPrefab(name)))
     end
     local berries = SpawnPrefab("berries")
-    assert(p.components.container:GiveItem(berries, 32))
+    assert(p.components.container:GiveItem(berries, 30))
     berries.components.perishable:SetPercent(.2)
     local record = p:GetSaveRecord()
     p:Remove()
     p = assert(SpawnSaveRecord(record))
     local modules = p.components.gb_foodmodules
     assert(modules.preservation and modules.freshness and p._gb_modules:value() == 3)
-    berries = p.components.container:GetItemInSlot(32)
+    berries = p.components.container:GetItemInSlot(30)
     assert(berries.prefab == "berries")
     assert(p.components.preserver:GetPerishRateMultiplier(berries) == 0)
     modules:LongUpdate(TUNING.TOTAL_DAY_TIME)
@@ -405,5 +406,67 @@ test("both new plugins craft with matching custom icons and ground builds", func
     player:Remove()
 end)
 
-print("GROWINGPACK_GAME_SUCCESS " .. count .. " tests")
-c_shutdown(false)
+-- Exercise real old save records, including worn bags at non-origin positions.
+local migrations = {}
+for level=1,3 do
+    local template=pack()
+    for n=1,level do upgrade(template,n) end
+    local record=template:GetSaveRecord()
+    template:Remove()
+    record.data.gb_capacity_version=nil
+    record.data.container.items={}
+    for slot=1,8*(level+1) do
+        local item=SpawnPrefab("axe")
+        record.data.container.items[slot]=item:GetSaveRecord()
+        item:Remove()
+    end
+    local restored=assert(SpawnSaveRecord(record))
+    local player=SpawnPrefab("wilson")
+    player.Transform:SetPosition(20+level*7,0,20)
+    player.components.inventory:Equip(restored)
+    local snapshot=restored:GetSaveRecord()
+    assert(#snapshot.data.container.gb_overflow==8*(level+1)-slots(level))
+    assert(snapshot.data.gb_level==level)
+    migrations[#migrations+1]={pack=restored,player=player,level=level}
+end
+local sparse=pack()
+upgrade(sparse,1)
+local sparse_record=sparse:GetSaveRecord()
+sparse:Remove()
+sparse_record.data.gb_capacity_version=nil
+local gem=SpawnPrefab("yellowgem")
+sparse_record.data.container.items={[16]=gem:GetSaveRecord()}
+gem:Remove()
+sparse=assert(SpawnSaveRecord(sparse_record))
+
+TheWorld:DoTaskInTime(.1,function()
+    local ok,err=pcall(function()
+        test("old 16/24/32 full worn bags preserve tiers and drop excess beside owners",function()
+            for _,case in ipairs(migrations) do
+                local p,player,level=case.pack,case.player,case.level
+                assert(p._gb_level:value()==level and p.components.container.numslots==slots(level))
+                for i=1,slots(level) do assert(p.components.container:GetItemInSlot(i).prefab=="axe") end
+                local x,y,z=player.Transform:GetWorldPosition()
+                local dropped=0
+                for _,item in ipairs(TheSim:FindEntities(x,y,z,2)) do
+                    if item.prefab=="axe" and item.components.inventoryitem.owner==nil then
+                        assert(item.persists)
+                        dropped=dropped+1
+                        item:Remove()
+                    end
+                end
+                assert(dropped==8*(level+1)-slots(level),"legacy excess must drop at equipped owner")
+                assert(p:GetSaveRecord().data.container.gb_overflow==nil)
+                p:Remove();player:Remove()
+            end
+        end)
+        test("legacy sparse last slot moves into available space without promoting tier",function()
+            assert(sparse._gb_level:value()==1 and sparse.components.container.numslots==15)
+            assert(sparse.components.container:GetItemInSlot(1).prefab=="yellowgem")
+            sparse:Remove()
+        end)
+    end)
+    if not ok then print("GROWINGPACK_GAME_FAILURE "..tostring(err))
+    else print("GROWINGPACK_GAME_SUCCESS "..count.." tests") end
+    c_shutdown(false)
+end)

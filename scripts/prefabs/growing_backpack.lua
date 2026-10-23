@@ -143,6 +143,7 @@ local function fn()
     inst.components.equippable:SetOnEquipToModel(function(inst) inst.components.container:Close() end)
     inst:AddComponent("container")
     SetLevel(inst, 0)
+    require("gb_save_migration").Install(inst)
     inst:AddComponent("gb_foodmodules")
     inst:AddComponent("trader")
     inst.components.trader:SetAcceptTest(CanUpgrade)
@@ -154,13 +155,23 @@ local function fn()
     inst.components.burnable:SetOnIgniteFn(function(inst) inst.components.container.canbeopened = false end)
     inst.components.burnable:SetOnExtinguishFn(function(inst) inst.components.container.canbeopened = true end)
     MakeHauntableLaunchAndDropFirstItem(inst)
-    inst.OnSave = function(inst, data) data.gb_level = inst._gb_level:value() end
-    -- Resize BEFORE container.OnLoad restores items in slots 9 through 32.
+    inst.OnSave = function(inst, data)
+        data.gb_level = inst._gb_level:value()
+        data.gb_capacity_version = 2
+    end
+    -- Keep explicitly saved tiers, even when old slots exceed the new capacity.
     inst.OnPreLoad = function(inst, data)
         local level = data and layout.ClampLevel(data.gb_level) or 0
-        -- Recover capacity from contents if an old or incomplete save omits its level.
-        for slot in pairs(data and data.container and data.container.items or {}) do
-            if type(slot) == "number" then level = math.max(level, math.ceil(slot / 8) - 1) end
+        if not data or data.gb_level == nil then
+            for slot in pairs(data and data.container and data.container.items or {}) do
+                if type(slot) == "number" then
+                    if data.gb_capacity_version == 2 then
+                        while level < 3 and slot > layout.Slots(level) do level = level + 1 end
+                    else
+                        level = math.max(level, math.ceil(slot / 8) - 1)
+                    end
+                end
+            end
         end
         SetLevel(inst, level)
     end

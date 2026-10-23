@@ -14,24 +14,22 @@ lua.execute('''
 local layout = require("gb_layout")
 for level = 0, 3 do
     local data = layout.Make(level, function(x,y,z) return {x=x,y=y,z=z} end)
-    assert(#data.widget.slotpos == 8 * (level+1))
-    local seen = {}
+    assert(#data.widget.slotpos == ({8,15,23,30})[level+1])
+    local seen, rows = {}, {}
     for index, pos in ipairs(data.widget.slotpos) do
         local key = pos.x .. ":" .. pos.y
-        if index <= 8 then assert(not seen[key]) else assert(seen[key]) end
+        assert(not seen[key])
         seen[key] = true
-        assert(pos.x == -162 or pos.x == -87)
-        assert(math.abs(pos.y) < 115)
+        rows[pos.y] = true
+        assert(pos.x <= -50 and pos.x >= -1170)
+        assert(pos.y == 0 or pos.y == -76)
     end
-    -- All capacities share the original four-row, two-column page footprint.
-    local rows = {}
-    for _, pos in ipairs(data.widget.slotpos) do rows[pos.y] = true end
     local rowcount = 0
     for _ in pairs(rows) do rowcount = rowcount + 1 end
-    assert(rowcount == 4)
+    assert(rowcount == (level < 2 and 1 or 2))
 end
 assert(layout.Slots(-1) == 8)
-assert(layout.Slots(99) == 32)
+assert(layout.Slots(99) == 30)
 
 local containers={params={}}
 for level=0,3 do containers.params["growing_backpack_"..level]=layout.Make(level,function() end) end
@@ -73,7 +71,7 @@ inst._gb_level:set(2); pending(inst)
 assert(replica.name == "growing_backpack_2")
 open=true; inst._gb_level:set(3); events.gb_leveldirty(inst)
 assert(replica.name == "growing_backpack_3" and closes == 1 and opens == 1)
-assert(inst.displaynamefn(inst):find("32"))
+assert(inst.displaynamefn(inst):find("30"))
 
 -- Client collection must work with replicas alone (no server components).
 local upgrade = require("gb_upgrade_action")

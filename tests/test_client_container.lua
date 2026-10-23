@@ -1,3 +1,4 @@
+local slots = require("gb_layout").Slots
 require("class")
 local noop = function() end
 local pending = {}
@@ -99,7 +100,7 @@ print("CLIENT_PASS repeated initialization after auto-equip is safe")
 for level=0,3 do
     parent._gb_level:set(level)
     sync.Refresh(parent); Drain()
-    local count=8*(level+1)
+    local count=slots(level)
     assert(replica:GetNumSlots()==count and #classified._items==count)
     assert(#replica:GetWidget().slotpos==count and replica:IsOpenedBy(ThePlayer))
     local item={prefab="rocks", replica={}}
@@ -122,12 +123,12 @@ print("CLIENT_PASS all tiers retain live last-slot updates, full detection, and 
 replica:Close(); replica:DetachClassified()
 local replacement=Classified(); replacement.parent=parent; replacement:OnEntityReplicated(); Drain()
 replica:Open(ThePlayer)
-assert(#replacement._items==32 and replica:GetNumSlots()==32)
+assert(#replacement._items==30 and replica:GetNumSlots()==30)
 for level=0,3 do
     for _,waiting in ipairs({false,true}) do
         local p,r,c=Setup(level,waiting)
         sync.Refresh(p); Drain()
-        assert(#c._items==8*(level+1) and r:GetNumSlots()==8*(level+1))
+        assert(#c._items==slots(level) and r:GetNumSlots()==slots(level))
         assert(#c.events["items[32]dirty"]==1, "reserve slot listener must be registered exactly once")
     end
 end
@@ -145,6 +146,6 @@ Drain() -- actual prefab's zero-delay callback, with an already-open container
 assert(#c._items==8 and r:IsOpenedBy(ThePlayer))
 for level=1,3 do
     pack._gb_level:set(level); pack:PushEvent("gb_leveldirty"); Drain()
-    assert(#c._items==8*(level+1) and r:GetNumSlots()==8*(level+1))
+    assert(#c._items==slots(level) and r:GetNumSlots()==slots(level))
 end
 print("CLIENT_PASS actual prefab initial task and level-dirty events with real vanilla replicas")

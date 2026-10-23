@@ -72,9 +72,9 @@ local names = {
 }
 local descriptions = {
     growing_backpack = "从八格起步，伴你探索到远古。",
-    gb_upgrade_1 = "将成长背包从 8 格升级到 16 格。",
-    gb_upgrade_2 = "将成长背包从 16 格升级到 24 格。",
-    gb_upgrade_3 = "将成长背包从 24 格升级到 32 格。",
+    gb_upgrade_1 = "将成长背包从 8 格升级到 15 格。",
+    gb_upgrade_2 = "将成长背包从 15 格升级到 23 格。",
+    gb_upgrade_3 = "将成长背包从 23 格升级到 30 格。",
     gb_preservation_kit = "安装在机械或远古包上，获得冰箱75%的保鲜效果。",
     gb_freshness_kit = "安装在远古包上，每游戏日恢复25%食物新鲜度。无需先装保鲜。",
 }

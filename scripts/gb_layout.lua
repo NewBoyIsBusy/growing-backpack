@@ -5,26 +5,22 @@ function M.ClampLevel(value)
 end
 
 function M.Slots(level)
-    return 8 * (M.ClampLevel(level) + 1)
+    return ({8, 15, 23, 30})[M.ClampLevel(level) + 1]
 end
 
 function M.Make(level, Vector3)
     local count = M.Slots(level)
     local widget = {
         slotpos = {},
-        animbank = "ui_backpack_2x4",
-        animbuild = "ui_backpack_2x4",
-        pos = Vector3(-5, -80, 0),
-        gb_paged_backpack = true,
+        bgatlas = "images/hud.xml", bgimage = "inventory_bg.tex",
+        pos = Vector3(-20, -190, 0),
+        gb_rows = math.ceil(count / 15), gb_columns = math.min(count, 15),
     }
-    -- Keep every real slot in the definition so network/storage capacity stays
-    -- unchanged. Each eight slots use the vanilla 2x4 page coordinates.
     for index = 0, count - 1 do
-        local cell = index % 8
-        widget.slotpos[#widget.slotpos + 1] = Vector3(-162 + (cell % 2) * 75,
-            114 - math.floor(cell / 2) * 75, 0)
+        local row, col = math.floor(index / 15), index % 15
+        local rowcount = math.min(15, count - row * 15)
+        widget.slotpos[#widget.slotpos + 1] = Vector3(-50 - (rowcount - 1 - col) * 80, -row * 76, 0)
     end
-    return { widget = widget, issidewidget = true, type = "pack", openlimit = 1 }
+    return {widget = widget, issidewidget = true, type = "pack", openlimit = 1}
 end
-
 return M
